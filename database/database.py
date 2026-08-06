@@ -1,8 +1,9 @@
 import sqlite3
 import hashlib
+from typing import Optional
 
-import database.dataclasses
-import music_player.exceptions
+from exceptions import *
+from .dataclasses import Song, Playlist
 
 class MusicDatabase:
     def __init__(self, database_name: str = "music_database.db"):
@@ -100,9 +101,147 @@ class MusicDatabase:
                                         )
                         return cursor.fetchone() is not None
 
-    #### CRUD operations #####
+    #### Song CRUD operations #####
     def get_all_songs(self) -> set[Song]:
         with self.__get_connection() as connection:
             cursor: sqlite3.Cursor = connection.cursor()
             result: sqlite3.Cursor = cursor.execute("select * from songs")
             return {Song.from_tuple(row) for row in result.fetchall()}
+
+    def add_song(self, title: str, artist: str, genre: str, duration_in_seconds: float, file_path: str) -> None:
+        try:
+            with self.__get_connection() as connection:
+                cursor: sqlite3.Cursor = connection.cursor()
+                cursor.execute(
+                    "insert into songs (title, artist, genre, duration, file_path) values (?, ?, ?, ?, ?)",
+                    (title, artist, genre, duration_in_seconds, file_path)
+                )
+                connection.commit()
+        except sqlite3.IntegrityError as exception:
+             raise SongAlreadyExistsError(title) from exception
+
+    def get_song(self, title: str, artist: str) -> Optional[Song]:
+        with self.__get_connection() as connection:
+            cursor: sqlite3.Cursor = connection.cursor()
+            cursor.execute("select * from songs where title = ? and artist = ?", (title, artist))
+            row = cursor.fetchone()
+            return Song.from_tuple(row) if row else None
+
+    def get_songs_by_artist(self, artist: str) -> set[Song]:
+        with self.__get_connection() as connection:
+            cursor: sqlite3.Cursor = connection.cursor()
+            cursor.execute("select * from songs where artist = ?", (artist,))
+            return {Song.from_tuple(row) for row in cursor.fetchall()}
+
+    def delete_song(self, song_id: int) -> None:
+        with self.__get_connection() as connection:
+            cursor: sqlite3.Cursor = connection.cursor()
+            cursor.execute("delete from songs where id = ?", (song_id,))
+            connection.commit()
+
+    #### Playlist CRUD operations #####
+    def create_playlist(self, user_id: int, name: str) -> bool:
+        with self.__get_connection() as connection:
+            cursor: sqlite3.Cursor = connection.cursor()
+            cursor.execute("INSERT INTO playlists (user_id, name) VALUES (?, ?)", (user_id, name))
+            connection.commit()
+            playlist_id = cursor.lastrowid
+            cursor.execute("SELECT * FROM playlists WHERE id = ?", (playlist_id,))
+            row = cursor.fetchone()
+            return row is not None
+
+    def get_playlists_by_user(self, user_id: int) -> set[Playlist]:
+        with self.__get_connection() as connection:
+            cursor: sqlite3.Cursor = connection.cursor()
+            cursor.execute("SELECT * FROM playlists WHERE user_id = ?", (user_id,))
+            return {Playlist.from_tuple(row) for row in cursor.fetchall()}
+
+    def add_song_to_playlist(self, playlist_id: int, song_id: int) -> None:
+        try:
+            with self.__get_connection() as connection:
+                cursor: sqlite3.Cursor = connection.cursor()
+                cursor.execute(
+                    "INSERT INTO playlist_songs (playlist_id, song_id) VALUES (?, ?)",
+                    (playlist_id, song_id)
+                )
+                connection.commit()
+        except sqlite3.IntegrityError as error:
+            raise InvalidSongForPlaylist(f"Could not add song {song_id} to playlist {playlist_id}.") from error
+
+    def get_playlist_songs(self, playlist_id: int) -> set[Song]:
+        with self.__get_connection() as conn:
+            cursor: sqlite3.Cursor = conn.cursor()
+            query: str = """
+                SELECT s.* FROM songs s
+                JOIN playlist_songs ps ON s.id = ps.song_id
+                WHERE ps.playlist_id = ?
+            """
+            cursor.execute(query, (playlist_id,))
+            return {Song.from_tuple(row) for row in cursor.fetchall()}
+
+    def delete_playlist(self, playlist_id: int) -> bool:
+        with self.__get_connection() as connection:
+            cursor: sqlite3.Cursor = connection.cursor()
+            cursor.execute("DELETE FROM playlists WHERE id = ?", (playlist_id,))
+            connection.commit()
+            return cursor.rowcount > 0
+
+    #### Statistiics and History ####
+    def  record_song_play(self, user_id: int, song_id: int) -> None:
+        try:
+            with self.__get_connection() as connection:
+                cursor: sqlite3.Cursor = connection.cursor()
+                cursor.execute(
+                    "INSERT INTO play_history (user_id, song_id) VALUES (?, ?)",
+                    (user_id, song_id)
+                )
+                connection.commit()
+        except sqlite3.IntegrityError as error:
+            raise InvalidSongPlay(f"Could not record play for song {song_id} by user {user_id}.") from error
+
+    def get_top_genre(self, user_id: int) -> Optional[str]:
+        with self.__get_connection() as connection:
+            cursor: sqlite3.Cursor = connection.cursor()
+            query: str = """
+                select s.genre, count(*) as play_count
+                from play_history ph
+                inner join songs s on ph.song_id = s.id
+                where ph.user_id = ?
+                group by s.genre
+                order by play_count desc
+                limit 1
+            """
+            cursor.execute(query, (user_id,))
+            row: Optional[tuple[str, int]] = cursor.fetchone()
+            return row[0] if row else None
+
+    def get_most_played_song(self, user_id: int) -> Optional[tuple[str, str, int]]:
+        with self.__get_connection() as connection:
+            cursor: sqlite3.Cursor = connection.cursor()
+            query: str = """
+                select s.title, s.artist, count(*) as play_count
+                from play_history ph
+                inner join songs s on ph.song_id = s.id
+                where ph.user_id = ?
+                group by s.id
+                order by play_count desc
+                limit 1
+            """
+            cursor.execute(query, (user_id,))
+            row: Optional[tuple[str, str, int]] = cursor.fetchone()
+            return row
+
+    def get_top_artist(self, user_id: int) -> Optional[str]:
+        with self.__get_connection() as connection:
+            cursor: sqlite3.Cursor = connection.cursor()
+            query: str = """
+                select s.artist, count(*) as play_count
+                from play_history ph
+                inner join songs s on ph.song_id = s.id
+                where ph.user_id = ?
+                group by s.artist
+                order by play_count desc
+                limit 1
+            """
+            cursor.execute(query, (user_id,))
+            return cursor.fetchone()
