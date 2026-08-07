@@ -15,3 +15,8 @@ class InvalidSongForPlaylist(ValueError):
 class InvalidSongPlay(ValueError):
     def __init__(self, message: str):
         super().__init__(message)
+
+class VolumeOutOfRangeError(ValueError):
+    def __init__(self, volume: float):
+        message: str = f"Volume {volume} is out of range. Must be between 0 and 100."
+        super().__init__(message)

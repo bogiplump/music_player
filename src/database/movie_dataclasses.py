@@ -1,8 +1,7 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import Tuple
 from datetime import datetime
+from dataclasses import dataclass
 
 
 @dataclass(frozen=True)

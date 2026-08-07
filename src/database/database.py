@@ -2,8 +2,8 @@ import sqlite3
 import hashlib
 from typing import Optional
 
-from exceptions import *
-from .dataclasses import Song, Playlist
+from src.exceptions import *
+from src.database.movie_dataclasses import Song, Playlist
 
 class MusicDatabase:
     def __init__(self, database_name: str = "music_database.db"):
