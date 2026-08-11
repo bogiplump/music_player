@@ -3,7 +3,7 @@ import hashlib
 from typing import Optional
 
 from src.exceptions import *
-from src.database.movie_dataclasses import Song, Playlist
+from src.database.music_dataclasses import Song, Playlist
 
 class MusicDatabase:
     def __init__(self, database_name: str = "music_database.db"):
@@ -83,9 +83,12 @@ class MusicDatabase:
         try:
             with self.__get_connection() as connection:
                 cursor: sqlite3.Cursor = connection.cursor()
-                cursor.execute("inser into users values(?, ?)", (username, hashed_password))
+                cursor.execute("insert into users(username, password_hash) values(?, ?)",
+                                (username, hashed_password))
         except sqlite3.IntegrityError as exception:
             raise InvalidUsernameError(username) from exception
+        except sqlite3.OperationalError as exception:
+            raise UserRegistrationError("Database operation failed.") from exception
 
     def is_user_authenticated(self, username: str, raw_password: str) -> bool:
         hashed_password: str = hashlib.sha256(raw_password.encode()).hexdigest()
@@ -139,6 +142,21 @@ class MusicDatabase:
             cursor.execute("delete from songs where id = ?", (song_id,))
             connection.commit()
 
+    def song_exists(self, title: str, artist: str) -> bool:
+        with self.__get_connection() as connection:
+            cursor: sqlite3.Cursor = connection.cursor()
+            cursor.execute("""select 1 
+                           from songs 
+                           where title = ? and artist = ?""", 
+                           (title, artist))
+            return cursor.fetchone() is not None
+
+    def song_exists_by_id(self, song_id: int) -> bool:
+        with self.__get_connection() as connection:
+            cursor: sqlite3.Cursor = connection.cursor()
+            cursor.execute("select 1 from songs where id = ?", (song_id,))
+            return cursor.fetchone() is not None
+
     #### Playlist CRUD operations #####
     def create_playlist(self, user_id: int, name: str) -> bool:
         with self.__get_connection() as connection:
@@ -156,7 +174,16 @@ class MusicDatabase:
             cursor.execute("SELECT * FROM playlists WHERE user_id = ?", (user_id,))
             return {Playlist.from_tuple(row) for row in cursor.fetchall()}
 
+    def playslist_exists(self, playlist_id: int) -> bool:
+        with self.__get_connection() as connection:
+            cursor: sqlite3.Cursor = connection.cursor()
+            cursor.execute("select 1 from playlists where id = ?", (playlist_id,))
+            return cursor.fetchone() is not None
+
     def add_song_to_playlist(self, playlist_id: int, song_id: int) -> None:
+        if not self.playslist_exists(playlist_id) or not self.song_exists_by_id(song_id):
+            raise InvalidSongForPlaylist(f"Playlist {playlist_id} or song {song_id} does not exist.")
+
         try:
             with self.__get_connection() as connection:
                 cursor: sqlite3.Cursor = connection.cursor()

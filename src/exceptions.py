@@ -1,3 +1,6 @@
+import sqlite3
+
+
 class InvalidUsernameError(ValueError):
     def __init__(self, invalid_username: str):
         message: str = f"Username {invalid_username} already exists."
@@ -19,4 +22,8 @@ class InvalidSongPlay(ValueError):
 class VolumeOutOfRangeError(ValueError):
     def __init__(self, volume: float):
         message: str = f"Volume {volume} is out of range. Must be between 0 and 100."
+        super().__init__(message)
+
+class UserRegistrationError(sqlite3.OperationalError):
+    def __init__(self, message: str):
         super().__init__(message)
