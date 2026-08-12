@@ -48,6 +48,7 @@ class Playlist:
     def from_tuple(cls, row: tuple[int, int, str, str]) -> Playlist:
         return cls(id=row[0], user_id=row[1], name=row[2], created_at=str(row[3]))
 
+
 @dataclass(frozen=True)
 class PlayHistory:
     id: int
@@ -56,5 +57,5 @@ class PlayHistory:
     played_at: datetime
 
     @classmethod
-    def from_tuple(cls, row: tuple[int, int, int, datetime]) ->PlayHistory:
+    def from_tuple(cls, row: tuple[int, int, int, datetime]) -> PlayHistory:
         return cls(id=row[0], user_id=row[1], song_id=row[2], played_at=row[3])
