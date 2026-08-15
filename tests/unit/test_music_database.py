@@ -89,7 +89,7 @@ def test_add_song_and_get_all_songs() -> None:
     db: MusicDatabase = make_fresh_db()
     try:
         db.add_song("Song A", "Artist X", "Rock", 210.5, "/music/a.mp3")
-        songs: set[Song] = db.get_all_songs()
+        songs: list[Song] = db.get_all_songs()
         assert len(songs) == 1
         song: Song = next(iter(songs))
         assert song.title == "Song A"

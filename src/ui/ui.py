@@ -4,7 +4,6 @@ from typing import Optional
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
-    QApplication,
     QMainWindow,
     QWidget,
     QVBoxLayout,
@@ -24,7 +23,9 @@ from PyQt6.QtMultimedia import (
     QAudioOutput
 )
 from mutagen.easyid3 import EasyID3
+from mutagen import MutagenError
 
+from database.music_dataclasses import Song
 from src.exceptions import InvalidUsernameError, UserRegistrationError
 from src.database.music_database import MusicDatabase
 from src.player.player import AudioPlayer
@@ -181,14 +182,69 @@ class MainWindow(QMainWindow):
         if status == QMediaPlayer.MediaStatus.EndOfMedia:
             self.play_next()
 
-    def __refresh_library_list(self) -> None:
-        pass
+    def __refresh_library_list(self, songs_data: Optional[list[Song]] = None) -> None:
+        self.library_list.clear()
+        data: list[Song] = self.database.get_all_songs(
+        ) if songs_data is None else songs_data
+        for song in data:
+            item: QListWidgetItem = QListWidgetItem(
+                f"{song.title} - {song.artist}")
+            item.setData(Qt.ItemDataRole.UserRole, song)
+            self.library_list.addItem(item)
 
     def add_files(self) -> None:
-        pass
+        files: list[str] = []
+        files, _ = QFileDialog.getOpenFileNames(
+            self,
+            "Select Songs",
+            os.path.expanduser("~"),
+            "Audio (*.mp3 *.wav)"
+        )
 
-    def search_music(self) -> None:
-        pass
+        if not files:
+            return
+
+        count: int = 0
+        failed_files: list[tuple[str, str]] = []
+
+        for file_path in files:
+            filename: str = os.path.basename(file_path)
+            try:
+                audio: EasyID3 = EasyID3(file_path)
+                if "title" in audio:
+                    title: str = audio["title"][0]
+                if "artist" in audio:
+                    artist: str = audio["artist"][0]
+                if "genre" in audio:
+                    genre: str = audio["genre"][0]
+            except MutagenError as error:
+                failed_files.append((filename, str(error)))
+
+            self.database.add_song(title, artist, genre, file_path)
+            count += 1
+
+        self.__refresh_library_list()
+
+        if failed_files:
+            failed_files_details: str = "\n".join(
+                f"- {name} : {error}" for name, error in failed_files)
+            QMessageBox.warning(
+                self,
+                "Some id3 tags could not be read.",
+                f"Added {count} songs but {len(failed_files)} had unreadable metadata.\n" +
+                failed_files_details
+            )
+        else:
+            QMessageBox.information(
+                self,
+                "Success",
+                f"Added {count} songs!"
+            )
+
+    def search_music(self, text: str) -> None:
+        if not text:
+            self.__refresh_library_list()
+        else:
 
     def add_to_queue_and_play(self) -> None:
         pass
@@ -196,10 +252,16 @@ class MainWindow(QMainWindow):
     def add_selection_to_queue(self) -> None:
         pass
 
+    def play_from_queue(self) -> None:
+        pass
+
     def remove_from_queue(self) -> None:
         pass
 
     def play_next(self) -> None:
+        pass
+
+    def play_previous(self) -> None:
         pass
 
 
@@ -305,11 +367,11 @@ class LoginWindow(QMainWindow):
         password: str = self.password_edit.text()
 
         if not username or not password:
-            self.error_label.setText("Enter a username or password.")
+            self.print_error("Enter a username or password.")
             return
 
-        if not self.database.authenticate_user(username=username, raw_password=password):
-            self.error_label.setText("Invalid username or password.")
+        if not self.database.authenticate_user(username, password):
+            self.print_error("Invalid username or password.")
             return
 
         self.open_main_window(username)
@@ -319,31 +381,33 @@ class LoginWindow(QMainWindow):
         password: str = self.register_password_edit.text()
 
         if not username or not password:
-            self.error_label.setText("Enter a username or password.")
+            self.print_error("Enter a username or password.")
             return
 
         try:
             self.database.register_user(username, password)
         except InvalidUsernameError:
-            self.error_label.setText("Username already exists.")
+            self.print_error("Username already exists.")
+            return
         except UserRegistrationError:
-            self.error_label.setText("Could not register user.")
+            self.print_error("Could not register user.")
+            return
 
-        self.open_main_window(username)
+        self.register_username_edit.setText("")
+        self.register_password_edit.setText("")
+        self.print_success("Registered successfully!")
+
+    def print_error(self, text: str) -> None:
+        self.error_label.setStyleSheet("color: #cc3333;")
+        self.error_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.error_label.setText(text)
+
+    def print_success(self, text: str) -> None:
+        self.error_label.setStyleSheet("color: #7FFF00;")
+        self.error_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.error_label.setText(text)
 
     def open_main_window(self, username: str) -> None:
         self.__main_window = MainWindow(self.database, username)
         self.__main_window.show()
         self.close()
-
-
-def main() -> None:
-    app: QApplication = QApplication(sys.argv)
-    music_database: MusicDatabase = MusicDatabase()
-    login_window: QMainWindow = LoginWindow(database=music_database)
-    login_window.show()
-    sys.exit(app.exec())
-
-
-if __name__ == "__main__":
-    main()

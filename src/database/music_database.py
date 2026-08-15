@@ -123,11 +123,11 @@ class MusicDatabase:
             return cursor.fetchone() is not None
 
     #### Song CRUD operations #####
-    def get_all_songs(self) -> set[Song]:
+    def get_all_songs(self) -> list[Song]:
         with self.__get_connection() as connection:
             cursor: sqlite3.Cursor = connection.cursor()
             result: sqlite3.Cursor = cursor.execute("select * from songs")
-            return {Song.from_tuple(row) for row in result.fetchall()}
+            return [Song.from_tuple(row) for row in result.fetchall()]
 
     def add_song(self, title: str, artist: str, genre: str, duration_in_seconds: float, file_path: str) -> None:
         try:
