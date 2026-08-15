@@ -82,7 +82,7 @@ def test_set_volume_under_range_raises_error():
     with patch("PyQt6.QtMultimedia.QMediaPlayer") as mock_player, \
             patch("PyQt6.QtMultimedia.QAudioOutput") as mock_audio:
 
-        audio_player = AudioPlayer(mock_player, mock_audio)
+        audio_player: AudioPlayer = AudioPlayer(mock_player, mock_audio)
 
         with pytest.raises(VolumeOutOfRangeError):
             audio_player.set_volume(-1.0)
@@ -92,7 +92,7 @@ def test_set_volume_over_range_raises_error():
     with patch("PyQt6.QtMultimedia.QMediaPlayer") as mock_player, \
             patch("PyQt6.QtMultimedia.QAudioOutput") as mock_audio:
 
-        audio_player = AudioPlayer(mock_player, mock_audio)
+        audio_player: AudioPlayer = AudioPlayer(mock_player, mock_audio)
 
         with pytest.raises(VolumeOutOfRangeError):
             audio_player.set_volume(101.0)
@@ -103,7 +103,7 @@ def test_is_playing_returns_true():
             patch("PyQt6.QtMultimedia.QAudioOutput") as mock_audio:
 
         mock_player.playbackState.return_value = QMediaPlayer.PlaybackState.PlayingState
-        audio_player = AudioPlayer(mock_player, mock_audio)
+        audio_player: AudioPlayer = AudioPlayer(mock_player, mock_audio)
 
         assert audio_player.is_playing() is True
 
@@ -113,6 +113,6 @@ def test_is_playing_returns_false():
             patch("PyQt6.QtMultimedia.QAudioOutput") as mock_audio:
 
         mock_player.playbackState.return_value = QMediaPlayer.PlaybackState.StoppedState
-        audio_player = AudioPlayer(mock_player, mock_audio)
+        audio_player: AudioPlayer = AudioPlayer(mock_player, mock_audio)
 
         assert audio_player.is_playing() is False
