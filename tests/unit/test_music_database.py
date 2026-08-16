@@ -151,6 +151,28 @@ def test_get_songs_by_artist_no_match_returns_empty_set():
         cleanup_db()
 
 
+def test_get_songs_by_title():
+    db: MusicDatabase = make_fresh_db()
+    try:
+        db.add_song("Song A", "Artist X", "Rock", 200.0, "/music/a.mp3")
+        db.add_song("Song B", "Artist X", "Jazz", 150.0, "/music/b.mp3")
+        db.add_song("Song A", "Artist Y", "Pop", 180.0, "/music/c.mp3")
+
+        songs: list[Song] = db.get_songs_by_title("Song A")
+        assert len(songs) == 2
+        assert {song.artist for song in songs} == {"Artist X", "Artist Y"}
+    finally:
+        cleanup_db()
+
+
+def test_get_songs_by_title_no_match_returns_empty_set():
+    db: MusicDatabase = make_fresh_db()
+    try:
+        assert db.get_songs_by_title("Nobody") == set()
+    finally:
+        cleanup_db()
+
+
 def test_delete_song():
     db: MusicDatabase = make_fresh_db()
     try:

@@ -1,5 +1,5 @@
 import os
-import sys
+import random
 from typing import Optional
 
 from PyQt6.QtCore import Qt
@@ -24,9 +24,10 @@ from PyQt6.QtMultimedia import (
 )
 from mutagen.easyid3 import EasyID3
 from mutagen import MutagenError
+from mutagen.mp3 import MP3
 
-from database.music_dataclasses import Song
-from src.exceptions import InvalidUsernameError, UserRegistrationError
+from src.database.music_dataclasses import Song
+from src.exceptions import InvalidUsernameError, UserRegistrationError, InvalidAccountError
 from src.database.music_database import MusicDatabase
 from src.player.player import AudioPlayer
 
@@ -37,6 +38,9 @@ class MainWindow(QMainWindow):
         self.__database: MusicDatabase = database
         self.__player: AudioPlayer = player if player else AudioPlayer(
             QMediaPlayer(), QAudioOutput())
+        self.__user_id = self.__database.get_user_id(username)
+        if not self.__user_id:
+            raise InvalidAccountError("Cannot use account.")
 
         self.__player.player.mediaStatusChanged.connect(
             self.on_media_status_changed)
@@ -79,6 +83,30 @@ class MainWindow(QMainWindow):
     def set_volume_slider(self, volume_slider: QSlider) -> None:
         self.__volume_slider = volume_slider
 
+    @property
+    def search_bar(self) -> QLineEdit:
+        return self.__search_bar
+
+    @search_bar.setter
+    def set_search_bar(self, search_bar: QLineEdit) -> None:
+        self.__search_bar = search_bar
+
+    @property
+    def library_list(self) -> QListWidget:
+        return self.__library_list
+
+    @library_list.setter
+    def set_library_list(self, library_list: QListWidget) -> None:
+        self.__library_list = library_list
+
+    @property
+    def user_id(self) -> int:
+        return self.__user_id
+
+    @user_id.setter
+    def set_user_id(self, user_id: int) -> None:
+        self.__user_id = user_id
+
     def __setup_ui(self) -> None:
         central: QWidget = QWidget()
         self.setCentralWidget(central)
@@ -96,16 +124,16 @@ class MainWindow(QMainWindow):
         library_column: QVBoxLayout = QVBoxLayout()
         library_column.addWidget(QLabel("📚 Library"))
 
-        self.search_bar: QLineEdit = QLineEdit()
-        self.search_bar.setPlaceholderText("Search library")
-        self.search_bar.textChanged.connect(self.search_music)
+        self.__search_bar: QLineEdit = QLineEdit()
+        self.__search_bar.setPlaceholderText("Search library")
+        self.__search_bar.textChanged.connect(self.search_music)
         library_column.addWidget(self.search_bar)
 
-        self.library_list: QListWidget = QListWidget()
-        self.library_list.setSelectionMode(
+        self.__library_list: QListWidget = QListWidget()
+        self.__library_list.setSelectionMode(
             QAbstractItemView.SelectionMode.ExtendedSelection)
         self.library_list.itemDoubleClicked.connect(self.add_to_queue_and_play)
-        library_column.addWidget(self.library_list)
+        library_column.addWidget(self.__library_list)
 
         button_add_queue: QPushButton = QPushButton("➡️ Add to queue")
         button_add_queue.clicked.connect(self.add_selection_to_queue)
@@ -136,29 +164,36 @@ class MainWindow(QMainWindow):
         self.label_now_playing.setAlignment(Qt.AlignmentFlag.AlignCenter)
         main_layout.addWidget(self.label_now_playing)
 
-        # --- Playback controls ---
-        controls_layout = QHBoxLayout()
+        # --- Playlists ---
+        # TODO
 
-        button_previous = QPushButton("⏮️")
+        # --- Playback controls ---
+        controls_layout: QHBoxLayout = QHBoxLayout()
+
+        button_previous: QPushButton = QPushButton("⏮️")
         button_previous.clicked.connect(self.play_previous)
 
-        button_play = QPushButton("▶️")
+        button_play: QPushButton = QPushButton("▶️")
         button_play.clicked.connect(self.player.play)
 
-        button_pause = QPushButton("⏸️")
+        button_pause: QPushButton = QPushButton("⏸️")
         button_pause.clicked.connect(self.player.pause)
 
-        button_stop = QPushButton("⏹️")
+        button_stop: QPushButton = QPushButton("⏹️")
         button_stop.clicked.connect(self.player.stop)
 
-        button_next = QPushButton("⏭️")
+        button_next: QPushButton = QPushButton("⏭️")
         button_next.clicked.connect(self.play_next)
+
+        button_shuffle: QPushButton = QPushButton("🔀")
+        button_shuffle.clicked.connect(self.shuffle)
 
         controls_layout.addWidget(button_previous)
         controls_layout.addWidget(button_play)
         controls_layout.addWidget(button_pause)
         controls_layout.addWidget(button_stop)
         controls_layout.addWidget(button_next)
+        controls_layout.addWidget(button_shuffle)
         main_layout.addLayout(controls_layout)
 
         # --- Volume ---
@@ -198,7 +233,7 @@ class MainWindow(QMainWindow):
             self,
             "Select Songs",
             os.path.expanduser("~"),
-            "Audio (*.mp3 *.wav)"
+            "Audio (*.mp3)"
         )
 
         if not files:
@@ -209,6 +244,11 @@ class MainWindow(QMainWindow):
 
         for file_path in files:
             filename: str = os.path.basename(file_path)
+            title: str = os.path.splitext(filename)[0]
+            artist: str = "Unknown Artist"
+            genre: str = "Unknown Genre"
+            length: float = 0.0
+
             try:
                 audio: EasyID3 = EasyID3(file_path)
                 if "title" in audio:
@@ -220,7 +260,13 @@ class MainWindow(QMainWindow):
             except MutagenError as error:
                 failed_files.append((filename, str(error)))
 
-            self.database.add_song(title, artist, genre, file_path)
+            try:
+                audio_info: MP3 = MP3(file_path)
+                length: float = audio_info.info.length
+            except MutagenError as error:
+                failed_files.append((filename, f"duration: {error}"))
+
+            self.database.add_song(title, artist, genre, length, file_path)
             count += 1
 
         self.__refresh_library_list()
@@ -245,23 +291,87 @@ class MainWindow(QMainWindow):
         if not text:
             self.__refresh_library_list()
         else:
+            self.__refresh_library_list(self.database.get_songs_by_title(text))
 
-    def add_to_queue_and_play(self) -> None:
-        pass
+    # Song Queue
+    # Qt::UserRole corresponds to Song objects
+    def add_to_queue_and_play(self, item: QListWidgetItem) -> None:
+        song: Song = item.data(Qt.ItemDataRole.UserRole)
+        new_item: QListWidgetItem = self.__add_item_to_queue(song)
+        self.queue_list.setCurrentItem(new_item)
+        self.play_from_queue()
 
     def add_selection_to_queue(self) -> None:
-        pass
+        for item in self.library_list.selectedItems():
+            self.__add_item_to_queue(item.data(Qt.ItemDataRole.UserRole))
+
+    def __add_item_to_queue(self, song: Song) -> QListWidgetItem:
+        item: QListWidgetItem = QListWidgetItem(
+            f"{song.title} - {song.artist}")
+        item.setData(Qt.ItemDataRole.UserRole, song)
+        self.queue_list.addItem(item)
+        return item
 
     def play_from_queue(self) -> None:
-        pass
+        item: Optional[QListWidgetItem] = self.queue_list.currentItem()
+        if not item:
+            return
+
+        song: Song = item.data(Qt.ItemDataRole.UserRole)
+        self.label_now_playing.setText(
+            f"Now playing: {song.title} - {song.artist}")
+        self.player.load_song(song.file_path)
+        self.player.play()
+        self.database.record_song_play(self.user_id, song.id)
 
     def remove_from_queue(self) -> None:
-        pass
+        for item in self.queue_list.selectedItems():
+            self.queue_list.takeItem(self.queue_list.row(item))
 
     def play_next(self) -> None:
-        pass
+        count: int = self.queue_list.count()
+        if count == 0:
+            return
+
+        row: int = self.queue_list.currentRow()
+        next_row = row + 1 if row < count + 1 else 0
+        self.queue_list.setCurrentRow(next_row)
+        self.play_from_queue()
 
     def play_previous(self) -> None:
+        count: int = self.queue_list.count()
+        if count == 0:
+            return
+
+        row: int = self.queue_list.currentRow()
+        previous_row = row - 1 if row > 0 else count - 1
+        self.queue_list.setCurrentRow(previous_row)
+        self.play_from_queue()
+
+    def shuffle(self) -> None:
+        count: int = self.queue_list.count()
+        songs: list[Song] = []
+
+        for i in range(count):
+            temp: Optional[QListWidgetItem] = self.queue_list.item(i)
+            if not temp:
+                raise ValueError(
+                    "Something went wrong when shuffling the queue.")
+
+            songs.append(temp.data(Qt.ItemDataRole.UserRole))
+
+        random.shuffle(songs)
+        self.queue_list.clear()
+        for song in songs:
+            self.__add_item_to_queue(song)
+
+    def save_playlist(self) -> None:
+        pass
+
+    def load_playlist(self) -> None:
+        pass
+
+    def delete_playlist(self) -> None:
         pass
 
 
@@ -408,6 +518,11 @@ class LoginWindow(QMainWindow):
         self.error_label.setText(text)
 
     def open_main_window(self, username: str) -> None:
-        self.__main_window = MainWindow(self.database, username)
+        try:
+            self.__main_window = MainWindow(self.database, username)
+        except InvalidAccountError as error:
+            self.print_error(str(error))
+            return
+
         self.__main_window.show()
         self.close()

@@ -122,6 +122,13 @@ class MusicDatabase:
             cursor.execute("select 1 from users where id = ?", (user_id,))
             return cursor.fetchone() is not None
 
+    def get_user_id(self, username: str) -> Optional[int]:
+        with self.__get_connection() as connection:
+            cursor: sqlite3.Cursor = connection.cursor()
+            cursor.execute(
+                "select 1 from users where username = ?", (username,))
+            return cursor.fetchone()
+
     #### Song CRUD operations #####
     def get_all_songs(self) -> list[Song]:
         with self.__get_connection() as connection:
@@ -154,6 +161,12 @@ class MusicDatabase:
             cursor: sqlite3.Cursor = connection.cursor()
             cursor.execute("select * from songs where artist = ?", (artist,))
             return {Song.from_tuple(row) for row in cursor.fetchall()}
+
+    def get_songs_by_title(self, title: str) -> list[Song]:
+        with self.__get_connection() as connection:
+            cursor: sqlite3.Cursor = connection.cursor()
+            cursor.execute("select * from songs where title like ?", (title,))
+            return [Song.from_tuple(row) for row in cursor.fetchall()]
 
     def delete_song(self, song_id: int) -> None:
         with self.__get_connection() as connection:

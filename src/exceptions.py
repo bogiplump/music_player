@@ -32,3 +32,8 @@ class VolumeOutOfRangeError(ValueError):
 class UserRegistrationError(sqlite3.OperationalError):
     def __init__(self, message: str):
         super().__init__(message)
+
+
+class InvalidAccountError(ValueError):
+    def __init__(self, message: str):
+        super().__init__(message)
