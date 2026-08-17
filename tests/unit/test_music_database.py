@@ -165,10 +165,10 @@ def test_get_songs_by_title():
         cleanup_db()
 
 
-def test_get_songs_by_title_no_match_returns_empty_set():
+def test_get_songs_by_title_no_match_returns_empty():
     db: MusicDatabase = make_fresh_db()
     try:
-        assert db.get_songs_by_title("Nobody") == set()
+        assert db.get_songs_by_title("Nobody") == []
     finally:
         cleanup_db()
 
@@ -180,7 +180,7 @@ def test_delete_song():
         song: Optional[Song] = db.get_song("Song A", "Artist X")
         assert song is not None
         db.delete_song(song.id)
-        assert db.get_all_songs() == set()
+        assert db.get_all_songs() == []
     finally:
         cleanup_db()
 

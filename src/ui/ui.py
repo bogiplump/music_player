@@ -17,6 +17,7 @@ from PyQt6.QtWidgets import (
     QMessageBox,
     QSlider,
     QAbstractItemView,
+    QInputDialog
 )
 from PyQt6.QtMultimedia import (
     QMediaPlayer,
@@ -26,21 +27,30 @@ from mutagen.easyid3 import EasyID3
 from mutagen import MutagenError
 from mutagen.mp3 import MP3
 
-from src.database.music_dataclasses import Song
-from src.exceptions import InvalidUsernameError, UserRegistrationError, InvalidAccountError
+from src.database.music_dataclasses import Song, Playlist
+from src.exceptions import (
+    InvalidUsernameError,
+    UserRegistrationError,
+    InvalidAccountError,
+    SongAlreadyExistsError,
+    InvalidSongForPlaylist
+)
 from src.database.music_database import MusicDatabase
 from src.player.player import AudioPlayer
 
 
 class MainWindow(QMainWindow):
-    def __init__(self, database: MusicDatabase, username: str, player: Optional[AudioPlayer] = None) -> None:
+    def __init__(self, database: MusicDatabase,
+                 username: str, player: Optional[AudioPlayer] = None) -> None:
         super().__init__()
         self.__database: MusicDatabase = database
         self.__player: AudioPlayer = player if player else AudioPlayer(
             QMediaPlayer(), QAudioOutput())
-        self.__user_id = self.__database.get_user_id(username)
-        if not self.__user_id:
+
+        temp: Optional[int] = self.__database.get_user_id(username)
+        if not temp:
             raise InvalidAccountError("Cannot use account.")
+        self.__user_id: int = temp
 
         self.__player.player.mediaStatusChanged.connect(
             self.on_media_status_changed)
@@ -50,6 +60,7 @@ class MainWindow(QMainWindow):
 
         self.__setup_ui()
         self.__refresh_library_list()
+        self.__refresh_playlist_list()
 
     @property
     def database(self) -> MusicDatabase:
@@ -107,6 +118,14 @@ class MainWindow(QMainWindow):
     def set_user_id(self, user_id: int) -> None:
         self.__user_id = user_id
 
+    @property
+    def playlist_list(self) -> QListWidget:
+        return self.__playlist_list
+
+    @playlist_list.setter
+    def set_playlist_list(self, playlist_list: QListWidget) -> None:
+        self.__playlist_list = playlist_list
+
     def __setup_ui(self) -> None:
         central: QWidget = QWidget()
         self.setCentralWidget(central)
@@ -114,9 +133,14 @@ class MainWindow(QMainWindow):
 
         # --- Top bar ---
         top_layout: QHBoxLayout = QHBoxLayout()
-        button_add = QPushButton("➕ Add songs")
+        button_add = QPushButton("Add songs")
         button_add.clicked.connect(self.add_files)
         top_layout.addWidget(button_add)
+
+        button_stats: QPushButton = QPushButton("Stats")
+        button_stats.clicked.connect(self.show_play_statistics)
+        top_layout.addWidget(button_stats)
+
         top_layout.addStretch()
         main_layout.addLayout(top_layout)
 
@@ -154,18 +178,39 @@ class MainWindow(QMainWindow):
         button_remove_queue.clicked.connect(self.remove_from_queue)
         queue_column.addWidget(button_remove_queue)
 
+        # --- Playlists ---
+        playlist_column: QVBoxLayout = QVBoxLayout()
+        playlist_column.addWidget(QLabel("📚 Playlists"))
+
+        self.__playlist_list: QListWidget = QListWidget()
+        self.__playlist_list.setSelectionMode(
+            QAbstractItemView.SelectionMode.SingleSelection)
+        self.__playlist_list.itemDoubleClicked.connect(self.load_playlist)
+        playlist_column.addWidget(self.__playlist_list)
+
+        button_new_playlist: QPushButton = QPushButton("🆕 New playlist")
+        button_new_playlist.clicked.connect(self.save_playlist)
+        playlist_column.addWidget(button_new_playlist)
+
+        button_add_to_playlist: QPushButton = QPushButton(
+            "➕ Add selected song(s)")
+        button_add_to_playlist.clicked.connect(self.add_selected_to_playlist)
+        playlist_column.addWidget(button_add_to_playlist)
+
+        button_delete_playlist: QPushButton = QPushButton("🗑️ Delete playlist")
+        button_delete_playlist.clicked.connect(self.delete_playlist)
+        playlist_column.addWidget(button_delete_playlist)
+
         lists_layout: QHBoxLayout = QHBoxLayout()
         lists_layout.addLayout(library_column, 1)
         lists_layout.addLayout(queue_column, 1)
+        lists_layout.addLayout(playlist_column, 1)
         main_layout.addLayout(lists_layout)
 
         # --- Now playing ---
         self.label_now_playing: QLabel = QLabel("Stopped")
         self.label_now_playing.setAlignment(Qt.AlignmentFlag.AlignCenter)
         main_layout.addWidget(self.label_now_playing)
-
-        # --- Playlists ---
-        # TODO
 
         # --- Playback controls ---
         controls_layout: QHBoxLayout = QHBoxLayout()
@@ -227,6 +272,14 @@ class MainWindow(QMainWindow):
             item.setData(Qt.ItemDataRole.UserRole, song)
             self.library_list.addItem(item)
 
+    def __refresh_playlist_list(self) -> None:
+        self.playlist_list.clear()
+        playlists = self.database.get_playlists_by_user(self.user_id)
+        for playlist in playlists:
+            item: QListWidgetItem = QListWidgetItem(playlist.name)
+            item.setData(Qt.ItemDataRole.UserRole, playlist)
+            self.playlist_list.addItem(item)
+
     def add_files(self) -> None:
         files: list[str] = []
         files, _ = QFileDialog.getOpenFileNames(
@@ -266,8 +319,11 @@ class MainWindow(QMainWindow):
             except MutagenError as error:
                 failed_files.append((filename, f"duration: {error}"))
 
-            self.database.add_song(title, artist, genre, length, file_path)
-            count += 1
+            try:
+                self.database.add_song(title, artist, genre, length, file_path)
+                count += 1
+            except SongAlreadyExistsError as error:
+                failed_files.append((filename, f"duration: {error}"))
 
         self.__refresh_library_list()
 
@@ -294,7 +350,7 @@ class MainWindow(QMainWindow):
             self.__refresh_library_list(self.database.get_songs_by_title(text))
 
     # Song Queue
-    # Qt::UserRole corresponds to Song objects
+    # Qt.ItemDataRole.UserRole corresponds to Song objects throughout
     def add_to_queue_and_play(self, item: QListWidgetItem) -> None:
         song: Song = item.data(Qt.ItemDataRole.UserRole)
         new_item: QListWidgetItem = self.__add_item_to_queue(song)
@@ -365,14 +421,104 @@ class MainWindow(QMainWindow):
         for song in songs:
             self.__add_item_to_queue(song)
 
+    # Here UserRole corresponds to Playlist objects
     def save_playlist(self) -> None:
-        pass
+        name, ok = QInputDialog.getText(self, "New playlist", "Playlist name:")
+        if not ok or not name:
+            return
+
+        created: bool = self.database.create_playlist(self.user_id, name)
+        if not created:
+            QMessageBox.warning(
+                self, "Could not create playlist", "Something went wrong.")
+            return
+
+        self.__refresh_playlist_list()
 
     def load_playlist(self) -> None:
-        pass
+        item: Optional[QListWidgetItem] = self.playlist_list.currentItem()
+        if not item:
+            return
+
+        playlist: Playlist = item.data(Qt.ItemDataRole.UserRole)
+        songs: list[Song] = self.database.get_playlist_songs(playlist.id)
+        for song in songs:
+            self.__add_item_to_queue(song)
 
     def delete_playlist(self) -> None:
-        pass
+        item: Optional[QListWidgetItem] = self.playlist_list.currentItem()
+        if not item:
+            return
+
+        playlist: Playlist = item.data(Qt.ItemDataRole.UserRole)
+        confirm: QMessageBox.StandardButton = QMessageBox.question(
+            self, "Delete playlist", f"Delete {playlist.name}?")
+        if confirm != QMessageBox.StandardButton.Yes:
+            return
+
+        deleted: bool = self.database.delete_playlist(playlist.id)
+        if deleted:
+            self.__refresh_playlist_list()
+
+    def add_selected_to_playlist(self) -> None:
+        playlist_item: Optional[QListWidgetItem] = self.playlist_list.currentItem(
+        )
+        if not playlist_item:
+            QMessageBox.information(
+                self, "No playlist selected", "Select a playlist first.")
+            return
+
+        selected_songs: list[QListWidgetItem] = self.library_list.selectedItems(
+        )
+        if not selected_songs:
+            QMessageBox.information(
+                self, "No songs selected", "Select songs first.")
+
+        playlist: Playlist = playlist_item.data(Qt.ItemDataRole.UserRole)
+        failed: list[str] = []
+
+        for item in selected_songs:
+            song: Song = item.data(Qt.ItemDataRole.UserRole)
+            try:
+                self.database.add_song_to_playlist(playlist.id, song.id)
+            except InvalidSongForPlaylist:
+                failed.append(song.title)
+
+        count_added: int = len(selected_songs) - len(failed)
+        message: str = f"Added {count_added} songs to {playlist.name}"
+        if failed:
+            message += f"\nCould not add {", ".join(failed)}"
+        QMessageBox.information(
+            self,
+            "Added to playlist",
+            message
+        )
+
+    def show_play_statistics(self) -> None:
+        top_genre: Optional[str] = self.database.get_top_genre(self.user_id)
+        top_artist: Optional[str] = self.database.get_top_artist(self.user_id)
+        most_played: Optional[tuple[str, str, int]] = self.database.get_most_played_song(
+            self.user_id)
+        if most_played is None or top_genre is None or top_artist is None:
+            QMessageBox.warning(
+                self,
+                "Could not generate statistics",
+                "Something went wrong."
+            )
+            return
+
+        most_played_title, most_played_artist, most_played_count = most_played
+        lines: list[str] = []
+        lines.append(f"Top genre: {top_genre}")
+        lines.append(f"Top artist: {top_artist}")
+        lines.append(
+            f"Most played: {most_played_title} by {most_played_artist} - played {most_played_count} times")
+
+        QMessageBox.information(
+            self,
+            "Your stats",
+            "\n".join(lines)
+        )
 
 
 class LoginWindow(QMainWindow):

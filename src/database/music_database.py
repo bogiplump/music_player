@@ -126,8 +126,8 @@ class MusicDatabase:
         with self.__get_connection() as connection:
             cursor: sqlite3.Cursor = connection.cursor()
             cursor.execute(
-                "select 1 from users where username = ?", (username,))
-            return cursor.fetchone()
+                "select id from users where username = ?", (username,))
+            return cursor.fetchone()[0]
 
     #### Song CRUD operations #####
     def get_all_songs(self) -> list[Song]:
@@ -153,7 +153,8 @@ class MusicDatabase:
             cursor: sqlite3.Cursor = connection.cursor()
             cursor.execute(
                 "select * from songs where title = ? and artist = ?", (title, artist))
-            row = cursor.fetchone()
+            row: Optional[tuple[int, str, str, str,
+                                float, str]] = cursor.fetchone()
             return Song.from_tuple(row) if row else None
 
     def get_songs_by_artist(self, artist: str) -> set[Song]:
@@ -199,8 +200,7 @@ class MusicDatabase:
             playlist_id = cursor.lastrowid
             cursor.execute(
                 "SELECT * FROM playlists WHERE id = ?", (playlist_id,))
-            row = cursor.fetchone()
-            return row is not None
+            return cursor.fetchone() is not None
 
     def get_playlists_by_user(self, user_id: int) -> set[Playlist]:
         with self.__get_connection() as connection:
