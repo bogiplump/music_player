@@ -7,7 +7,7 @@ import pytest
 
 from src.database.music_dataclasses import Song, Playlist
 from src.database.music_database import MusicDatabase
-from src.exceptions import (
+from src.exceptions.exceptions import (
     InvalidUsernameError,
     SongAlreadyExistsError,
     InvalidSongForPlaylist,
@@ -386,9 +386,8 @@ def test_get_top_artist():
         assert song is not None
 
         db.record_song_play(1, song.id)
-
-        result = db.get_top_artist(1)
-        assert result == ("Artist X", 1)
+        
+        assert db.get_top_artist(1) == "Artist X"
     finally:
         cleanup_db()
 

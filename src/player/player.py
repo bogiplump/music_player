@@ -2,7 +2,7 @@ from PyQt6.QtCore import QUrl
 from PyQt6.QtMultimedia import QMediaPlayer, QAudioOutput
 from typing import Optional
 
-from src.exceptions import VolumeOutOfRangeError
+from src.exceptions.exceptions import VolumeOutOfRangeError
 
 
 class AudioPlayer:
@@ -18,25 +18,25 @@ class AudioPlayer:
     def player(self) -> QMediaPlayer:
         return self.__player
 
+    @player.setter
+    def player(self, value: QMediaPlayer) -> None:
+        self.__player = value
+
     @property
     def audio_output(self) -> QAudioOutput:
         return self.__audio_output
+
+    @audio_output.setter
+    def audio_output(self, value: QAudioOutput) -> None:
+        self.__audio_output = value
 
     @property
     def current_file(self) -> Optional[str]:
         return self.__current_file
 
     @current_file.setter
-    def current_file(self, file_path: str) -> None:
-        self.__current_file = file_path
-
-    @player.setter
-    def player(self, player: QMediaPlayer) -> None:
-        self.__player = player
-
-    @audio_output.setter
-    def audio_output(self, audio_output: QAudioOutput) -> None:
-        self.__audio_output = audio_output
+    def current_file(self, value: str) -> None:
+        self.__current_file = value
 
     def load_song(self, file_path: str) -> None:
         self.__current_file = file_path

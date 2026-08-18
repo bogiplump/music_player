@@ -6,7 +6,7 @@ from PyQt6.QtWidgets import (
 )
 
 from src.database.music_database import MusicDatabase
-from src.ui.ui import LoginWindow
+from src.ui.login_window import LoginWindow
 
 
 def main() -> None:

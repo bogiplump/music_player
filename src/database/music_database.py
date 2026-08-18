@@ -6,7 +6,7 @@ from src.database.music_dataclasses import (
     Song,
     Playlist
 )
-from src.exceptions import (
+from src.exceptions.exceptions import (
     InvalidUsernameError,
     SongAlreadyExistsError,
     InvalidSongForPlaylist,
@@ -306,13 +306,14 @@ class MusicDatabase:
         with self.__get_connection() as connection:
             cursor: sqlite3.Cursor = connection.cursor()
             query: str = """
-                select s.artist, count(*) as play_count
+                select s.artist
                 from play_history ph
                 inner join songs s on ph.song_id = s.id
                 where ph.user_id = ?
                 group by s.artist
-                order by play_count desc
+                order by count(*) desc
                 limit 1
             """
             cursor.execute(query, (user_id,))
-            return cursor.fetchone()
+            row: tuple[str] = cursor.fetchone()
+            return row[0] if row else None

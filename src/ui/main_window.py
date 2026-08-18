@@ -28,9 +28,7 @@ from mutagen import MutagenError
 from mutagen.mp3 import MP3
 
 from src.database.music_dataclasses import Song, Playlist
-from src.exceptions import (
-    InvalidUsernameError,
-    UserRegistrationError,
+from src.exceptions.exceptions import (
     InvalidAccountError,
     SongAlreadyExistsError,
     InvalidSongForPlaylist
@@ -67,64 +65,64 @@ class MainWindow(QMainWindow):
         return self.__database
 
     @database.setter
-    def set_database(self, database: MusicDatabase) -> None:
-        self.__database = database
+    def database(self, value: MusicDatabase) -> None:
+        self.__database = value
 
     @property
     def player(self) -> AudioPlayer:
         return self.__player
 
     @player.setter
-    def set_player(self, player: AudioPlayer) -> None:
-        self.__player = player
+    def player(self, value: AudioPlayer) -> None:
+        self.__player = value
 
     @property
     def queue_list(self) -> QListWidget:
         return self.__queue_list
 
     @queue_list.setter
-    def set_queue_list(self, queue_list: QListWidget) -> None:
-        self.__queue_list = queue_list
+    def queue_list(self, value: QListWidget) -> None:
+        self.__queue_list = value
 
     @property
     def volume_slider(self) -> QSlider:
         return self.__volume_slider
 
     @volume_slider.setter
-    def set_volume_slider(self, volume_slider: QSlider) -> None:
-        self.__volume_slider = volume_slider
+    def volume_slider(self, value: QSlider) -> None:
+        self.__volume_slider = value
 
     @property
     def search_bar(self) -> QLineEdit:
         return self.__search_bar
 
     @search_bar.setter
-    def set_search_bar(self, search_bar: QLineEdit) -> None:
-        self.__search_bar = search_bar
+    def search_bar(self, value: QLineEdit) -> None:
+        self.__search_bar = value
 
     @property
     def library_list(self) -> QListWidget:
         return self.__library_list
 
     @library_list.setter
-    def set_library_list(self, library_list: QListWidget) -> None:
-        self.__library_list = library_list
+    def library_list(self, value: QListWidget) -> None:
+        self.__library_list = value
 
     @property
     def user_id(self) -> int:
         return self.__user_id
 
     @user_id.setter
-    def set_user_id(self, user_id: int) -> None:
-        self.__user_id = user_id
+    def user_id(self, value: int) -> None:
+        self.__user_id = value
 
     @property
     def playlist_list(self) -> QListWidget:
         return self.__playlist_list
 
     @playlist_list.setter
-    def set_playlist_list(self, playlist_list: QListWidget) -> None:
-        self.__playlist_list = playlist_list
+    def playlist_list(self, value: QListWidget) -> None:
+        self.__playlist_list = value
 
     def __setup_ui(self) -> None:
         central: QWidget = QWidget()
@@ -148,13 +146,13 @@ class MainWindow(QMainWindow):
         library_column: QVBoxLayout = QVBoxLayout()
         library_column.addWidget(QLabel("📚 Library"))
 
-        self.__search_bar: QLineEdit = QLineEdit()
-        self.__search_bar.setPlaceholderText("Search library")
-        self.__search_bar.textChanged.connect(self.search_music)
+        self.search_bar = QLineEdit()
+        self.search_bar.setPlaceholderText("Search library")
+        self.search_bar.textChanged.connect(self.search_music)
         library_column.addWidget(self.search_bar)
 
-        self.__library_list: QListWidget = QListWidget()
-        self.__library_list.setSelectionMode(
+        self.library_list = QListWidget()
+        self.library_list.setSelectionMode(
             QAbstractItemView.SelectionMode.ExtendedSelection)
         self.library_list.itemDoubleClicked.connect(self.add_to_queue_and_play)
         library_column.addWidget(self.__library_list)
@@ -166,13 +164,13 @@ class MainWindow(QMainWindow):
         queue_column: QVBoxLayout = QVBoxLayout()
         queue_column.addWidget(QLabel("🎶 Queue"))
 
-        self.__queue_list: QListWidget = QListWidget()
-        self.__queue_list.setDragDropMode(
+        self.queue_list = QListWidget()
+        self.queue_list.setDragDropMode(
             QAbstractItemView.DragDropMode.InternalMove)
-        self.__queue_list.setSelectionMode(
+        self.queue_list.setSelectionMode(
             QAbstractItemView.SelectionMode.ExtendedSelection)
-        self.__queue_list.itemDoubleClicked.connect(self.play_from_queue)
-        queue_column.addWidget(self.__queue_list)
+        self.queue_list.itemDoubleClicked.connect(self.play_from_queue)
+        queue_column.addWidget(self.queue_list)
 
         button_remove_queue: QPushButton = QPushButton("❌ Remove selected")
         button_remove_queue.clicked.connect(self.remove_from_queue)
@@ -182,22 +180,22 @@ class MainWindow(QMainWindow):
         playlist_column: QVBoxLayout = QVBoxLayout()
         playlist_column.addWidget(QLabel("📚 Playlists"))
 
-        self.__playlist_list: QListWidget = QListWidget()
-        self.__playlist_list.setSelectionMode(
+        self.playlist_list = QListWidget()
+        self.playlist_list.setSelectionMode(
             QAbstractItemView.SelectionMode.SingleSelection)
-        self.__playlist_list.itemDoubleClicked.connect(self.load_playlist)
-        playlist_column.addWidget(self.__playlist_list)
+        self.playlist_list.itemDoubleClicked.connect(self.load_playlist)
+        playlist_column.addWidget(self.playlist_list)
 
-        button_new_playlist: QPushButton = QPushButton("🆕 New playlist")
+        button_new_playlist: QPushButton = QPushButton("New playlist")
         button_new_playlist.clicked.connect(self.save_playlist)
         playlist_column.addWidget(button_new_playlist)
 
         button_add_to_playlist: QPushButton = QPushButton(
-            "➕ Add selected song(s)")
+            "Add selected song(s)")
         button_add_to_playlist.clicked.connect(self.add_selected_to_playlist)
         playlist_column.addWidget(button_add_to_playlist)
 
-        button_delete_playlist: QPushButton = QPushButton("🗑️ Delete playlist")
+        button_delete_playlist: QPushButton = QPushButton("Delete playlist")
         button_delete_playlist.clicked.connect(self.delete_playlist)
         playlist_column.addWidget(button_delete_playlist)
 
@@ -208,7 +206,7 @@ class MainWindow(QMainWindow):
         main_layout.addLayout(lists_layout)
 
         # --- Now playing ---
-        self.label_now_playing: QLabel = QLabel("Stopped")
+        self.label_now_playing = QLabel("Stopped")
         self.label_now_playing.setAlignment(Qt.AlignmentFlag.AlignCenter)
         main_layout.addWidget(self.label_now_playing)
 
@@ -245,17 +243,17 @@ class MainWindow(QMainWindow):
         volume_layout: QHBoxLayout = QHBoxLayout()
         volume_layout.addWidget(QLabel("Volume:"))
 
-        self.__volume_slider: QSlider = QSlider(Qt.Orientation.Horizontal)
+        self.volume_slider = QSlider(Qt.Orientation.Horizontal)
 
         min_volume: int = 0
         max_volume: int = 100
         default_volume: int = 50
 
-        self.__volume_slider.setRange(min_volume, max_volume)
-        self.__volume_slider.setValue(default_volume)
-        self.__volume_slider.valueChanged.connect(self.player.set_volume)
+        self.volume_slider.setRange(min_volume, max_volume)
+        self.volume_slider.setValue(default_volume)
+        self.volume_slider.valueChanged.connect(self.player.set_volume)
 
-        volume_layout.addWidget(self.__volume_slider)
+        volume_layout.addWidget(self.volume_slider)
         main_layout.addLayout(volume_layout)
 
     def on_media_status_changed(self, status: QMediaPlayer.MediaStatus) -> None:
@@ -305,17 +303,17 @@ class MainWindow(QMainWindow):
             try:
                 audio: EasyID3 = EasyID3(file_path)
                 if "title" in audio:
-                    title: str = audio["title"][0]
+                    title = audio["title"][0]
                 if "artist" in audio:
-                    artist: str = audio["artist"][0]
+                    artist = audio["artist"][0]
                 if "genre" in audio:
-                    genre: str = audio["genre"][0]
+                    genre = audio["genre"][0]
             except MutagenError as error:
                 failed_files.append((filename, str(error)))
 
             try:
                 audio_info: MP3 = MP3(file_path)
-                length: float = audio_info.info.length
+                length = audio_info.info.length
             except MutagenError as error:
                 failed_files.append((filename, f"duration: {error}"))
 
@@ -519,156 +517,3 @@ class MainWindow(QMainWindow):
             "Your stats",
             "\n".join(lines)
         )
-
-
-class LoginWindow(QMainWindow):
-    def __init__(self, database: MusicDatabase, main_window: Optional[MainWindow] = None) -> None:
-        super().__init__()
-        self.setWindowTitle("Music Player")
-        self.resize(1000, 600)
-
-        self.__main_window: Optional[MainWindow] = main_window
-        self.__database: MusicDatabase = database
-
-        self.__setup_ui()
-
-    @property
-    def main_window(self) -> Optional[MainWindow]:
-        return self.__main_window
-
-    @property
-    def username_edit(self) -> QLineEdit:
-        return self.__username_edit
-
-    @property
-    def password_edit(self) -> QLineEdit:
-        return self.__password_edit
-
-    @property
-    def register_username_edit(self) -> QLineEdit:
-        return self.__register_username_edit
-
-    @property
-    def register_password_edit(self) -> QLineEdit:
-        return self.__register_password_edit
-
-    @property
-    def error_label(self) -> QLabel:
-        return self.__error_label
-
-    @error_label.setter
-    def set_error_label(self, error_label: QLabel) -> None:
-        self.__error_label = error_label
-
-    @property
-    def database(self) -> MusicDatabase:
-        return self.__database
-
-    @database.setter
-    def set_database(self, database: MusicDatabase) -> None:
-        self.__database = database
-
-    def __setup_ui(self) -> None:
-        central_widget: QWidget = QWidget()
-        self.setCentralWidget(central_widget)
-        layout: QVBoxLayout = QVBoxLayout(central_widget)
-
-        content_margin: int = 30
-        layout_spacing: int = 12
-        layout.setContentsMargins(
-            content_margin, content_margin, content_margin, content_margin)
-        layout.setSpacing(layout_spacing)
-
-        title: QLabel = QLabel("Music Player")
-        title.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        title.setStyleSheet("fonr-size: 20px; font-weight: bold;")
-        layout.addWidget(title)
-
-        # Login
-        self.__username_edit: QLineEdit = QLineEdit("Username")
-        self.__username_edit.setPlaceholderText("Username")
-        layout.addWidget(self.__username_edit)
-
-        self.__password_edit: QLineEdit = QLineEdit()
-        self.__password_edit.setPlaceholderText("Password")
-        layout.addWidget(self.__password_edit)
-
-        login_button: QPushButton = QPushButton("Log in")
-        login_button.clicked.connect(self.attempt_login)
-        layout.addWidget(login_button)
-
-        # Register
-        self.__register_username_edit: QLineEdit = QLineEdit("Username")
-        self.__register_username_edit.setPlaceholderText("New Username")
-        layout.addWidget(self.__register_username_edit)
-
-        self.__register_password_edit: QLineEdit = QLineEdit()
-        self.__register_password_edit.setPlaceholderText("Password")
-        layout.addWidget(self.__register_password_edit)
-
-        register_button: QPushButton = QPushButton("Register")
-        register_button.clicked.connect(self.attempt_register)
-        layout.addWidget(register_button)
-
-        # Error Label
-        self.__error_label: QLabel = QLabel("")
-        self.__error_label.setStyleSheet("color: #cc3333;")
-        self.__error_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(self.__error_label)
-
-        layout.addStretch()
-
-    def attempt_login(self) -> None:
-        username: str = self.username_edit.text().strip()
-        password: str = self.password_edit.text()
-
-        if not username or not password:
-            self.print_error("Enter a username or password.")
-            return
-
-        if not self.database.authenticate_user(username, password):
-            self.print_error("Invalid username or password.")
-            return
-
-        self.open_main_window(username)
-
-    def attempt_register(self) -> None:
-        username: str = self.register_username_edit.text().strip()
-        password: str = self.register_password_edit.text()
-
-        if not username or not password:
-            self.print_error("Enter a username or password.")
-            return
-
-        try:
-            self.database.register_user(username, password)
-        except InvalidUsernameError:
-            self.print_error("Username already exists.")
-            return
-        except UserRegistrationError:
-            self.print_error("Could not register user.")
-            return
-
-        self.register_username_edit.setText("")
-        self.register_password_edit.setText("")
-        self.print_success("Registered successfully!")
-
-    def print_error(self, text: str) -> None:
-        self.error_label.setStyleSheet("color: #cc3333;")
-        self.error_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.error_label.setText(text)
-
-    def print_success(self, text: str) -> None:
-        self.error_label.setStyleSheet("color: #7FFF00;")
-        self.error_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.error_label.setText(text)
-
-    def open_main_window(self, username: str) -> None:
-        try:
-            self.__main_window = MainWindow(self.database, username)
-        except InvalidAccountError as error:
-            self.print_error(str(error))
-            return
-
-        self.__main_window.show()
-        self.close()
