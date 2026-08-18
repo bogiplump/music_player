@@ -1,5 +1,6 @@
-import pytest
 from unittest.mock import MagicMock
+
+import pytest
 from PyQt6.QtMultimedia import QMediaPlayer
 from PyQt6.QtCore import QUrl
 

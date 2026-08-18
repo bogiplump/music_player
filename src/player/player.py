@@ -1,6 +1,7 @@
+from typing import Optional
+
 from PyQt6.QtCore import QUrl
 from PyQt6.QtMultimedia import QMediaPlayer, QAudioOutput
-from typing import Optional
 
 from src.exceptions.exceptions import VolumeOutOfRangeError
 
