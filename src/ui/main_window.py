@@ -388,7 +388,7 @@ class MainWindow(QMainWindow):
             return
 
         row: int = self.queue_list.currentRow()
-        next_row = row + 1 if row < count + 1 else 0
+        next_row = row + 1 if row < count - 1 else 0
         self.queue_list.setCurrentRow(next_row)
         self.play_from_queue()
 

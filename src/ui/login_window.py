@@ -182,11 +182,12 @@ class LoginWindow(QMainWindow):
         self.error_label.setText(text)
 
     def open_main_window(self, username: str) -> None:
-        try:
-            self.__main_window = MainWindow(self.database, username)
-        except InvalidAccountError as error:
-            self.print_error(str(error))
-            return
+        if self.main_window is None:
+            try:
+                self.main_window = MainWindow(self.database, username)
+            except InvalidAccountError as error:
+                self.print_error(str(error))
+                return
 
-        self.__main_window.show()
+        self.main_window.show()
         self.close()
