@@ -9,12 +9,17 @@
 
 Стъпки за инсталация и стартиране на проекта:
 ### 1. Клонирайте хранилището на проекта от GitHub
+
 ### 2. (Препоръчително) Създайте виртуална среда чрез venv
-        python -m venv venv
-        source venv/bin/activate
+    python -m venv venv
+
+    source venv/bin/activate
+
 ### 3. Инсталирайте нужните библиотеки
-        pip install -r requirements.txt
+    pip install -r requirements.txt
+
 ### 4. Стартирайте приложението
-        python -m src.main
+    python -m src.main
+    
 ### 5. Стартирайте автоматичните тестове
-        python -m pytest --cov=src --cov-report=term-missing -v
+    python -m pytest --cov=src --cov-report=term-missing -v
