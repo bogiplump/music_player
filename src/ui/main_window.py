@@ -265,7 +265,7 @@ class MainWindow(QMainWindow):
     def __refresh_library_list(self, songs_data: Optional[list[Song]] = None) -> None:
         self.library_list.clear()
         data: list[Song] = self.database.get_all_songs(
-        ) if songs_data is None else songs_data
+            self.user_id) if songs_data is None else songs_data
         for song in data:
             item: QListWidgetItem = QListWidgetItem(
                 f"{song.title} - {song.artist}")
@@ -320,7 +320,8 @@ class MainWindow(QMainWindow):
                 failed_files.append((filename, f"duration: {error}"))
 
             try:
-                self.database.add_song(title, artist, genre, length, file_path)
+                self.database.add_song(
+                    self.user_id, title, artist, genre, length, file_path)
                 count += 1
             except SongAlreadyExistsError as error:
                 failed_files.append((filename, f"duration: {error}"))
@@ -347,7 +348,8 @@ class MainWindow(QMainWindow):
         if not text:
             self.__refresh_library_list()
         else:
-            self.__refresh_library_list(self.database.get_songs_by_title(text))
+            self.__refresh_library_list(
+                self.database.get_songs_by_title(text, self.user_id))
 
     # Song Queue
     # Qt.ItemDataRole.UserRole corresponds to Song objects throughout

@@ -21,6 +21,7 @@ class User:
 @dataclass(frozen=True)
 class Song:
     id: int
+    created_by_user_id: int
     title: str
     artist: str
     genre: str
@@ -28,14 +29,15 @@ class Song:
     file_path: str
 
     @classmethod
-    def from_tuple(cls, row: tuple[int, str, str, str, float, str]) -> Song:
+    def from_tuple(cls, row: tuple[int, int, str, str, str, float, str]) -> Song:
         return cls(
             id=row[0],
-            title=row[1],
-            artist=row[2],
-            genre=row[3],
-            duration_in_seconds=float(row[4]),
-            file_path=row[5]
+            created_by_user_id=row[1],
+            title=row[2],
+            artist=row[3],
+            genre=row[4],
+            duration_in_seconds=float(row[5]),
+            file_path=row[6]
         )
 
 

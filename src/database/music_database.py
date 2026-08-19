@@ -41,11 +41,15 @@ class MusicDatabase:
         create_songs_query: str = """
             CREATE TABLE IF NOT EXISTS songs (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
+                created_by_user_id INTEGER NOT NULL,
                 title TEXT NOT NULL,
                 artist TEXT default 'Unknown',
                 genre TEXT NOT NULL,
-                duration REAL NOT NULL, -- in seconds
-                file_path TEXT UNIQUE NOT NULL
+                duration REAL NOT NULL,
+                file_path TEXT NOT NULL,
+
+                UNIQUE (file_path, created_by_user_id),
+                FOREIGN KEY (created_by_user_id) REFERENCES users(id) ON DELETE CASCADE
             );"""
 
         create_playlists_query: str = """
@@ -132,43 +136,55 @@ class MusicDatabase:
             return cursor.fetchone()[0]
 
     #### Song CRUD operations #####
-    def get_all_songs(self) -> list[Song]:
+    def get_all_songs(self, user_id: int) -> list[Song]:
         with self.__get_connection() as connection:
             cursor: sqlite3.Cursor = connection.cursor()
-            result: sqlite3.Cursor = cursor.execute("select * from songs")
+            result: sqlite3.Cursor = cursor.execute(
+                """select * 
+                   from songs
+                   where created_by_user_id = ?
+                """,
+                (user_id,)
+            )
             return [Song.from_tuple(row) for row in result.fetchall()]
 
-    def add_song(self, title: str, artist: str, genre: str, duration_in_seconds: float, file_path: str) -> None:
+    def add_song(self, user_id: int, title: str, artist: str, genre: str, duration_in_seconds: float, file_path: str) -> None:
         try:
             with self.__get_connection() as connection:
                 cursor: sqlite3.Cursor = connection.cursor()
                 cursor.execute(
-                    "insert into songs (title, artist, genre, duration, file_path) values (?, ?, ?, ?, ?)",
-                    (title, artist, genre, duration_in_seconds, file_path)
+                    "insert into songs (created_by_user_id, title, artist, genre, duration, file_path) values (?, ?, ?, ?, ?, ?)",
+                    (user_id, title, artist, genre, duration_in_seconds, file_path)
                 )
                 connection.commit()
         except sqlite3.IntegrityError as exception:
             raise SongAlreadyExistsError(title) from exception
 
-    def get_song(self, title: str, artist: str) -> Optional[Song]:
+    def get_song(self, title: str, artist: str, user_id: int) -> Optional[Song]:
         with self.__get_connection() as connection:
             cursor: sqlite3.Cursor = connection.cursor()
             cursor.execute(
-                "select * from songs where title = ? and artist = ?", (title, artist))
-            row: Optional[tuple[int, str, str, str,
+                "select * from songs where title = ? and artist = ? and created_by_user_id = ?",
+                (title, artist, user_id)
+            )
+            row: Optional[tuple[int, int, str, str, str,
                                 float, str]] = cursor.fetchone()
             return Song.from_tuple(row) if row else None
 
-    def get_songs_by_artist(self, artist: str) -> set[Song]:
+    def get_songs_by_artist(self, artist: str, user_id: int) -> set[Song]:
         with self.__get_connection() as connection:
             cursor: sqlite3.Cursor = connection.cursor()
-            cursor.execute("select * from songs where artist = ?", (artist,))
+            cursor.execute(
+                "select * from songs where artist = ? and created_by_user_id = ?", (artist, user_id))
             return {Song.from_tuple(row) for row in cursor.fetchall()}
 
-    def get_songs_by_title(self, title: str) -> list[Song]:
+    def get_songs_by_title(self, title: str, user_id: int) -> list[Song]:
         with self.__get_connection() as connection:
             cursor: sqlite3.Cursor = connection.cursor()
-            cursor.execute("select * from songs where title like ?", (title,))
+            cursor.execute(
+                "select * from songs where title like ? and created_by_user_id = ?",
+                (title, user_id)
+            )
             return [Song.from_tuple(row) for row in cursor.fetchall()]
 
     def delete_song(self, song_id: int) -> None:
@@ -177,13 +193,16 @@ class MusicDatabase:
             cursor.execute("delete from songs where id = ?", (song_id,))
             connection.commit()
 
-    def song_exists(self, title: str, artist: str) -> bool:
+    def song_exists(self, title: str, artist: str, user_id: int) -> bool:
         with self.__get_connection() as connection:
             cursor: sqlite3.Cursor = connection.cursor()
-            cursor.execute("""select 1 
-                           from songs 
-                           where title = ? and artist = ?""",
-                           (title, artist))
+            cursor.execute(
+                """select 1 
+                   from songs 
+                   where title = ? and artist = ? and created_by_user_id = ?
+                """,
+                (title, artist, user_id)
+            )
             return cursor.fetchone() is not None
 
     def song_exists_by_id(self, song_id: int) -> bool:

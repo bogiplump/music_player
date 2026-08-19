@@ -88,8 +88,8 @@ def test_user_exists() -> None:
 def test_add_song_and_get_all_songs() -> None:
     db: MusicDatabase = make_fresh_db()
     try:
-        db.add_song("Song A", "Artist X", "Rock", 210.5, "/music/a.mp3")
-        songs: list[Song] = db.get_all_songs()
+        db.add_song(10, "Song A", "Artist X", "Rock", 210.5, "/music/a.mp3")
+        songs: list[Song] = db.get_all_songs(10)
         assert len(songs) == 1
         song: Song = next(iter(songs))
         assert song.title == "Song A" and song.artist == "Artist X" \
@@ -101,9 +101,10 @@ def test_add_song_and_get_all_songs() -> None:
 def test_add_duplicate_song_raises():
     db = make_fresh_db()
     try:
-        db.add_song("Song A", "Artist X", "Rock", 210.5, "/music/a.mp3")
+        db.add_song(10, "Song A", "Artist X", "Rock", 210.5, "/music/a.mp3")
         with pytest.raises(SongAlreadyExistsError):
-            db.add_song("Song A", "Artist X", "Rock", 210.5, "/music/a.mp3")
+            db.add_song(10, "Song A", "Artist X",
+                        "Rock", 210.5, "/music/a.mp3")
     finally:
         cleanup_db()
 
@@ -111,8 +112,8 @@ def test_add_duplicate_song_raises():
 def test_get_song():
     db: MusicDatabase = make_fresh_db()
     try:
-        db.add_song("Song A", "Artist X", "Rock", 210.5, "/music/a.mp3")
-        song: Optional[Song] = db.get_song("Song A", "Artist X")
+        db.add_song(10, "Song A", "Artist X", "Rock", 210.5, "/music/a.mp3")
+        song: Optional[Song] = db.get_song("Song A", "Artist X", 10)
         assert song is not None
         assert song.title == "Song A"
     finally:
@@ -122,7 +123,7 @@ def test_get_song():
 def test_get_song_not_found_returns_none():
     db: MusicDatabase = make_fresh_db()
     try:
-        assert db.get_song("Nonexistent", "Nobody") is None
+        assert db.get_song("Nonexistent", "Nobody", 10) is None
     finally:
         cleanup_db()
 
@@ -130,11 +131,11 @@ def test_get_song_not_found_returns_none():
 def test_get_songs_by_artist():
     db: MusicDatabase = make_fresh_db()
     try:
-        db.add_song("Song A", "Artist X", "Rock", 200.0, "/music/a.mp3")
-        db.add_song("Song B", "Artist X", "Jazz", 150.0, "/music/b.mp3")
-        db.add_song("Song C", "Artist Y", "Pop", 180.0, "/music/c.mp3")
+        db.add_song(10, "Song A", "Artist X", "Rock", 200.0, "/music/a.mp3")
+        db.add_song(10, "Song B", "Artist X", "Jazz", 150.0, "/music/b.mp3")
+        db.add_song(10, "Song C", "Artist Y", "Pop", 180.0, "/music/c.mp3")
 
-        songs: set[Song] = db.get_songs_by_artist("Artist X")
+        songs: set[Song] = db.get_songs_by_artist("Artist X", 10)
         assert len(songs) == 2
         assert {s.title for s in songs} == {"Song A", "Song B"}
     finally:
@@ -144,7 +145,7 @@ def test_get_songs_by_artist():
 def test_get_songs_by_artist_no_match_returns_empty_set():
     db: MusicDatabase = make_fresh_db()
     try:
-        assert db.get_songs_by_artist("Nobody") == set()
+        assert db.get_songs_by_artist("Nobody", 2) == set()
     finally:
         cleanup_db()
 
@@ -152,11 +153,11 @@ def test_get_songs_by_artist_no_match_returns_empty_set():
 def test_get_songs_by_title():
     db: MusicDatabase = make_fresh_db()
     try:
-        db.add_song("Song A", "Artist X", "Rock", 200.0, "/music/a.mp3")
-        db.add_song("Song B", "Artist X", "Jazz", 150.0, "/music/b.mp3")
-        db.add_song("Song A", "Artist Y", "Pop", 180.0, "/music/c.mp3")
+        db.add_song(11, "Song A", "Artist X", "Rock", 200.0, "/music/a.mp3")
+        db.add_song(11, "Song B", "Artist X", "Jazz", 150.0, "/music/b.mp3")
+        db.add_song(11, "Song A", "Artist Y", "Pop", 180.0, "/music/c.mp3")
 
-        songs: list[Song] = db.get_songs_by_title("Song A")
+        songs: list[Song] = db.get_songs_by_title("Song A", 11)
         assert len(songs) == 2
     finally:
         cleanup_db()
@@ -165,7 +166,7 @@ def test_get_songs_by_title():
 def test_get_songs_by_title_no_match_returns_empty_list():
     db: MusicDatabase = make_fresh_db()
     try:
-        assert db.get_songs_by_title("Nobody") == []
+        assert db.get_songs_by_title("Nobody", 10) == []
     finally:
         cleanup_db()
 
@@ -173,11 +174,11 @@ def test_get_songs_by_title_no_match_returns_empty_list():
 def test_delete_song():
     db: MusicDatabase = make_fresh_db()
     try:
-        db.add_song("Song A", "Artist X", "Rock", 210.5, "/music/a.mp3")
-        song: Optional[Song] = db.get_song("Song A", "Artist X")
+        db.add_song(10, "Song A", "Artist X", "Rock", 210.5, "/music/a.mp3")
+        song: Optional[Song] = db.get_song("Song A", "Artist X", 10)
         assert song is not None
         db.delete_song(song.id)
-        assert db.get_all_songs() == []
+        assert db.get_all_songs(10) == []
     finally:
         cleanup_db()
 
@@ -185,9 +186,9 @@ def test_delete_song():
 def test_song_exists():
     db: MusicDatabase = make_fresh_db()
     try:
-        db.add_song("Song A", "Artist X", "Rock", 210.5, "/music/a.mp3")
-        assert db.song_exists("Song A", "Artist X") is True
-        assert db.song_exists("Nope", "Nobody") is False
+        db.add_song(10, "Song A", "Artist X", "Rock", 210.5, "/music/a.mp3")
+        assert db.song_exists("Song A", "Artist X", 10) is True
+        assert db.song_exists("Nope", "Nobody", 10) is False
     finally:
         cleanup_db()
 
@@ -195,8 +196,8 @@ def test_song_exists():
 def test_song_exists_by_id():
     db: MusicDatabase = make_fresh_db()
     try:
-        db.add_song("Song A", "Artist X", "Rock", 210.5, "/music/a.mp3")
-        song = db.get_song("Song A", "Artist X")
+        db.add_song(10, "Song A", "Artist X", "Rock", 210.5, "/music/a.mp3")
+        song = db.get_song("Song A", "Artist X", 10)
         assert song is not None
         assert db.song_exists_by_id(song.id) is True
         assert db.song_exists_by_id(song.id + 999) is False
@@ -243,8 +244,8 @@ def test_add_song_to_playlist_and_get_playlist_songs():
     try:
         db.register_user("bogdan", "hunter2")
         db.create_playlist(1, "My Favorites")
-        db.add_song("Song A", "Artist X", "Rock", 210.5, "/music/a.mp3")
-        song: Optional[Song] = db.get_song("Song A", "Artist X")
+        db.add_song(10, "Song A", "Artist X", "Rock", 210.5, "/music/a.mp3")
+        song: Optional[Song] = db.get_song("Song A", "Artist X", 10)
 
         assert song is not None
 
@@ -260,8 +261,8 @@ def test_add_song_to_playlist_and_get_playlist_songs():
 def test_add_song_to_nonexistent_playlist_raises():
     db: MusicDatabase = make_fresh_db()
     try:
-        db.add_song("Song A", "Artist X", "Rock", 210.5, "/music/a.mp3")
-        song: Optional[Song] = db.get_song("Song A", "Artist X")
+        db.add_song(10, "Song A", "Artist X", "Rock", 210.5, "/music/a.mp3")
+        song: Optional[Song] = db.get_song("Song A", "Artist X", 10)
         assert song is not None
         with pytest.raises(InvalidSongForPlaylist):
             db.add_song_to_playlist(999, song.id)
@@ -315,8 +316,8 @@ def test_record_song_play():
     db: MusicDatabase = make_fresh_db()
     try:
         db.register_user("bogdan", "hunter2")
-        db.add_song("Song A", "Artist X", "Rock", 210.5, "/music/a.mp3")
-        song = db.get_song("Song A", "Artist X")
+        db.add_song(10, "Song A", "Artist X", "Rock", 210.5, "/music/a.mp3")
+        song = db.get_song("Song A", "Artist X", 10)
         assert song is not None
 
         db.record_song_play(1, song.id)
@@ -340,10 +341,10 @@ def test_get_top_genre():
     db: MusicDatabase = make_fresh_db()
     try:
         db.register_user("bogdan", "hunter2")
-        db.add_song("Song A", "Artist X", "Rock", 210.5, "/music/a.mp3")
-        db.add_song("Song B", "Artist Y", "Jazz", 150.0, "/music/b.mp3")
-        song_a: Optional[Song] = db.get_song("Song A", "Artist X")
-        song_b: Optional[Song] = db.get_song("Song B", "Artist Y")
+        db.add_song(10, "Song A", "Artist X", "Rock", 210.5, "/music/a.mp3")
+        db.add_song(10, "Song B", "Artist Y", "Jazz", 150.0, "/music/b.mp3")
+        song_a: Optional[Song] = db.get_song("Song A", "Artist X", 10)
+        song_b: Optional[Song] = db.get_song("Song B", "Artist Y", 10)
 
         assert song_a is not None and song_b is not None
 
@@ -378,8 +379,8 @@ def test_get_top_artist():
     db: MusicDatabase = make_fresh_db()
     try:
         db.register_user("bogdan", "hunter2")
-        db.add_song("Song A", "Artist X", "Rock", 210.5, "/music/a.mp3")
-        song: Optional[Song] = db.get_song("Song A", "Artist X")
+        db.add_song(10, "Song A", "Artist X", "Rock", 210.5, "/music/a.mp3")
+        song: Optional[Song] = db.get_song("Song A", "Artist X", 10)
         assert song is not None
 
         db.record_song_play(1, song.id)
