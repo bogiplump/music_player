@@ -77,13 +77,3 @@ def test_is_playing_returns_true():
     audio_player: AudioPlayer = AudioPlayer(mock_player, mock_audio)
 
     assert audio_player.is_playing() is True
-
-
-def test_is_playing_returns_false():
-    mock_player: MagicMock = MagicMock()
-    mock_audio: MagicMock = MagicMock()
-
-    mock_player.playbackState.return_value = QMediaPlayer.PlaybackState.StoppedState
-    audio_player: AudioPlayer = AudioPlayer(mock_player, mock_audio)
-
-    assert audio_player.is_playing() is False

@@ -135,9 +135,9 @@ def test_load_playlist(main_window: MainWindow) -> None:
 
 
 def mock_respnse(
-    parent: QWidget | None,
-    title: str | None,
-    text: str | None,
+    parent: Optional[QWidget],
+    title: Optional[str],
+    text: Optional[str],
     buttons: QMessageBox.StandardButton = QMessageBox.StandardButton.Ok,
     defaultButton: QMessageBox.StandardButton = QMessageBox.StandardButton.NoButton,
 ) -> QMessageBox.StandardButton:
@@ -157,4 +157,4 @@ def test_delete_playlist(main_window: MainWindow) -> None:
     main_window.database.delete_playlist.return_value = True
 
     main_window.delete_playlist()
-    main_window.database.delete_playlist.assert_called_with(playlist.id)
+    main_window.database.delete_playlist.assert_called_once_with(playlist.id)

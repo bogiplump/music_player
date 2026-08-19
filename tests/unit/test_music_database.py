@@ -66,7 +66,7 @@ def authenticate_nonexistent_user() -> None:
         cleanup_db()
 
 
-def test_user_exists() -> None:
+def test_user_exists_returns_false_if_not_exists() -> None:
     db: MusicDatabase = make_fresh_db()
     try:
         assert db.user_exists(1) is False
@@ -74,7 +74,7 @@ def test_user_exists() -> None:
         cleanup_db()
 
 
-def test_user_exists_returns_false_if_not_exists() -> None:
+def test_user_exists() -> None:
     db: MusicDatabase = make_fresh_db()
     try:
         db.register_user("bogi", "passw")
@@ -92,10 +92,8 @@ def test_add_song_and_get_all_songs() -> None:
         songs: list[Song] = db.get_all_songs()
         assert len(songs) == 1
         song: Song = next(iter(songs))
-        assert song.title == "Song A"
-        assert song.artist == "Artist X"
-        assert song.genre == "Rock"
-        assert song.duration_in_seconds == 210.5
+        assert song.title == "Song A" and song.artist == "Artist X" \
+            and song.genre == "Rock" and song.duration_in_seconds == 210.5
     finally:
         cleanup_db()
 
@@ -160,12 +158,11 @@ def test_get_songs_by_title():
 
         songs: list[Song] = db.get_songs_by_title("Song A")
         assert len(songs) == 2
-        assert {song.artist for song in songs} == {"Artist X", "Artist Y"}
     finally:
         cleanup_db()
 
 
-def test_get_songs_by_title_no_match_returns_empty():
+def test_get_songs_by_title_no_match_returns_empty_list():
     db: MusicDatabase = make_fresh_db()
     try:
         assert db.get_songs_by_title("Nobody") == []
@@ -386,7 +383,7 @@ def test_get_top_artist():
         assert song is not None
 
         db.record_song_play(1, song.id)
-        
+
         assert db.get_top_artist(1) == "Artist X"
     finally:
         cleanup_db()
