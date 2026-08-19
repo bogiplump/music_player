@@ -1,3 +1,5 @@
+"""Main window - centralmost part of the GUI"""
+
 import os
 import random
 from typing import Optional

@@ -1,3 +1,5 @@
+""""Dataclasses used to model sql schema."""
+
 from __future__ import annotations
 
 from datetime import datetime
