@@ -25,9 +25,6 @@ from PyQt6.QtMultimedia import (
     QMediaPlayer,
     QAudioOutput
 )
-from mutagen.easyid3 import EasyID3
-from mutagen import MutagenError
-from mutagen.mp3 import MP3
 
 from src.database.music_dataclasses import Song, Playlist
 from src.exceptions.exceptions import (
@@ -410,14 +407,17 @@ class MainWindow(QMainWindow):
             self.__add_item_to_queue(song)
 
     # Here UserRole corresponds to Playlist objects
-    def save_playlist(self) -> None:
-        name, ok = QInputDialog.getText(self, "New playlist", "Playlist name:")
+    def save_playlist(self, dialog: Optional[QInputDialog] = None, message_box: Optional[QMessageBox] = None) -> None:
+        dialog = dialog if dialog else QInputDialog()
+        message_box = message_box if message_box else QMessageBox()
+
+        name, ok = dialog.getText(self, "New playlist", "Playlist name:")
         if not ok or not name:
             return
 
         created: bool = self.database.create_playlist(self.user_id, name)
         if not created:
-            QMessageBox.warning(
+            message_box.warning(
                 self, "Could not create playlist", "Something went wrong.")
             return
 

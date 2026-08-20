@@ -197,3 +197,35 @@ def test_add_files_happy_path(main_window_mock: MainWindow) -> None:
     main_window_mock.database.add_song.assert_called_once_with(
         main_window_mock.user_id, *song_data)
     mock_message_box.information.assert_called_once()
+
+
+def test_save_playlist_creation_fails_shows_warning(main_window_mock: MainWindow) -> None:
+    mock_dialog: MagicMock = MagicMock()
+    mock_message_box = MagicMock()
+
+    mock_dialog.getText.return_value = ("My Playlist", True)
+    main_window_mock.database.create_playlist.return_value = False
+
+    main_window_mock.save_playlist(mock_dialog, mock_message_box)
+
+    main_window_mock.database.create_playlist.assert_called_once_with(
+        main_window_mock.user_id, "My Playlist")
+    mock_message_box.warning.assert_called_once()
+
+
+def __fill_queue(main_window: MainWindow, count: int) -> None:
+    for i in range(count):
+        song: Song = Song(
+            i, 1, f"title {i}", f"artist {i}", f"genre {i}", 120.0, "path")
+        item: QListWidgetItem = QListWidgetItem(song.title)
+        item.setData(Qt.ItemDataRole.UserRole, song)
+        main_window.queue_list.addItem(item)
+
+
+def test_play_previous_wraps_around_from_first_song(main_window_mock: MainWindow) -> None:
+    __fill_queue(main_window_mock, 3)
+    main_window_mock.queue_list.setCurrentRow(0)
+
+    main_window_mock.play_previous()
+
+    assert main_window_mock.queue_list.currentRow() == 2
