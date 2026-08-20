@@ -9,12 +9,14 @@ from src.exceptions.exceptions import VolumeOutOfRangeError
 
 
 class AudioPlayer:
+    """Responsible for all audio and skipping/rewinding/stopping songs."""
+
     def __init__(self, player: QMediaPlayer, audio_output: QAudioOutput) -> None:
         self.__player: QMediaPlayer = player
         self.__audio_output: QAudioOutput = audio_output
         self.__current_file: Optional[str] = None
 
-        self.player.setAudioOutput(self.__audio_output)
+        self.__player.setAudioOutput(self.__audio_output)
         self.__audio_output.setVolume(0.5)
 
     @property

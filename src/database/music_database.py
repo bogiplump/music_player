@@ -18,6 +18,7 @@ from src.exceptions.exceptions import (
 
 
 class MusicDatabase:
+    """Class is responsible for managing a database instance + all CRUD operations on it."""
     def __init__(self, database_name: str = "music_database.db"):
         self.__database_name: str = database_name
         self.__create_database()
@@ -92,7 +93,7 @@ class MusicDatabase:
             cursor.execute(create_play_history_query)
             connection.commit()
 
-    #### User & Authentication ####
+    #### User CRUD & Authentication ####
     def register_user(self, username: str, password: str) -> None:
         hashed_password: str = hashlib.sha256(password.encode()).hexdigest()
 
@@ -148,12 +149,16 @@ class MusicDatabase:
             )
             return [Song.from_tuple(row) for row in result.fetchall()]
 
-    def add_song(self, user_id: int, title: str, artist: str, genre: str, duration_in_seconds: float, file_path: str) -> None:
+    def add_song(self, user_id: int, title: str, artist: str,
+                 genre: str, duration_in_seconds: float, file_path: str) -> None:
         try:
             with self.__get_connection() as connection:
                 cursor: sqlite3.Cursor = connection.cursor()
                 cursor.execute(
-                    "insert into songs (created_by_user_id, title, artist, genre, duration, file_path) values (?, ?, ?, ?, ?, ?)",
+                    """insert into songs 
+                       (created_by_user_id, title, artist, genre, duration, file_path)
+                       values (?, ?, ?, ?, ?, ?)
+                    """,
                     (user_id, title, artist, genre, duration_in_seconds, file_path)
                 )
                 connection.commit()
@@ -175,7 +180,9 @@ class MusicDatabase:
         with self.__get_connection() as connection:
             cursor: sqlite3.Cursor = connection.cursor()
             cursor.execute(
-                "select * from songs where artist = ? and created_by_user_id = ?", (artist, user_id))
+                "select * from songs where artist = ? and created_by_user_id = ?",
+                (artist, user_id)
+            )
             return {Song.from_tuple(row) for row in cursor.fetchall()}
 
     def get_songs_by_title(self, title: str, user_id: int) -> list[Song]:

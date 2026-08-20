@@ -22,6 +22,9 @@ from src.ui.main_window import MainWindow
 
 
 class LoginWindow(QMainWindow):
+    """First window the user sees - responsible for registration and login 
+    + opening up the main window."""
+
     def __init__(self, database: MusicDatabase, main_window: Optional[MainWindow] = None) -> None:
         super().__init__()
         self.setWindowTitle("Music Player")
@@ -107,7 +110,7 @@ class LoginWindow(QMainWindow):
         # Login
         self.username_edit = QLineEdit("Username")
         self.username_edit.setPlaceholderText("Username")
-        layout.addWidget(self.__username_edit)
+        layout.addWidget(self.username_edit)
 
         self.password_edit = QLineEdit()
         self.password_edit.setPlaceholderText("Password")

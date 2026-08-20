@@ -37,9 +37,12 @@ from src.exceptions.exceptions import (
 )
 from src.database.music_database import MusicDatabase
 from src.player.player import AudioPlayer
+from src.ui.extract_file_data_service import ExtractFileDataService
 
 
 class MainWindow(QMainWindow):
+    """Music player that supports accounts, playlists and statistics."""
+
     def __init__(self, database: MusicDatabase,
                  username: str, player: Optional[AudioPlayer] = None) -> None:
         super().__init__()
@@ -280,9 +283,15 @@ class MainWindow(QMainWindow):
             item.setData(Qt.ItemDataRole.UserRole, playlist)
             self.playlist_list.addItem(item)
 
-    def add_files(self) -> None:
+    def add_files(self, dialog: Optional[QFileDialog] = None, message_box: Optional[QMessageBox] = None,
+                  data_service: Optional[ExtractFileDataService] = None) -> None:
+        # Making sure they are initialized.
+        dialog = dialog if dialog else QFileDialog()
+        message_box = message_box if message_box else QMessageBox()
+        data_service = data_service if data_service else ExtractFileDataService()
+
         files: list[str] = []
-        files, _ = QFileDialog.getOpenFileNames(
+        files, _ = dialog.getOpenFileNames(
             self,
             "Select Songs",
             os.path.expanduser("~"),
@@ -292,53 +301,30 @@ class MainWindow(QMainWindow):
         if not files:
             return
 
+        succeeded_files, failed_files = data_service.extract_metadata(files)
         count: int = 0
-        failed_files: list[tuple[str, str]] = []
 
-        for file_path in files:
-            filename: str = os.path.basename(file_path)
-            title: str = os.path.splitext(filename)[0]
-            artist: str = "Unknown Artist"
-            genre: str = "Unknown Genre"
-            length: float = 0.0
-
-            try:
-                audio: EasyID3 = EasyID3(file_path)
-                if "title" in audio:
-                    title = audio["title"][0]
-                if "artist" in audio:
-                    artist = audio["artist"][0]
-                if "genre" in audio:
-                    genre = audio["genre"][0]
-            except MutagenError as error:
-                failed_files.append((filename, str(error)))
-
-            try:
-                audio_info: MP3 = MP3(file_path)
-                length = audio_info.info.length
-            except MutagenError as error:
-                failed_files.append((filename, f"duration: {error}"))
-
+        for file in succeeded_files:
             try:
                 self.database.add_song(
-                    self.user_id, title, artist, genre, length, file_path)
+                    self.user_id, *file)
                 count += 1
             except SongAlreadyExistsError as error:
-                failed_files.append((filename, f"duration: {error}"))
+                failed_files.append((file[4], str(error)))
 
         self.__refresh_library_list()
 
         if failed_files:
             failed_files_details: str = "\n".join(
                 f"- {name} : {error}" for name, error in failed_files)
-            QMessageBox.warning(
+            message_box.warning(
                 self,
                 "Some id3 tags could not be read.",
                 f"Added {count} songs but {len(failed_files)} had unreadable metadata.\n" +
                 failed_files_details
             )
         else:
-            QMessageBox.information(
+            message_box.information(
                 self,
                 "Success",
                 f"Added {count} songs!"
@@ -514,7 +500,8 @@ class MainWindow(QMainWindow):
         lines.append(f"Top genre: {top_genre}")
         lines.append(f"Top artist: {top_artist}")
         lines.append(
-            f"Most played: {most_played_title} by {most_played_artist} - played {most_played_count} times")
+            f"""Most played: {most_played_title}
+              by {most_played_artist} - played {most_played_count} times""")
 
         QMessageBox.information(
             self,

@@ -42,14 +42,12 @@ def test_login_with_wrong_credentials_shows_error(login_window_mock: LoginWindow
 
 
 def test_login_with_correct_credentials_opens_main_window(login_window_mock: LoginWindow) -> None:
-    mock_main_window = MagicMock()
-    login_window_mock.main_window = mock_main_window
     login_window_mock.username_edit.setText("bogdan")
     login_window_mock.password_edit.setText("hunter2")
 
     login_window_mock.attempt_login()
 
-    mock_main_window.show.assert_called_once()
+    login_window_mock.main_window.show.assert_called_once()
 
 
 def test_register_with_empty_fields_shows_error(login_window_mock: LoginWindow) -> None:

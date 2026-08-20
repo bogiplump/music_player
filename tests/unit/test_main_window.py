@@ -159,3 +159,41 @@ def test_delete_playlist(main_window_mock: MainWindow) -> None:
     main_window_mock.delete_playlist()
     main_window_mock.database.delete_playlist.assert_called_once_with(
         playlist.id)
+
+# Add file tests:
+
+
+def test_add_files_no_files_selected_does_nothing(main_window_mock: MainWindow) -> None:
+    mock_dialog: MagicMock = MagicMock()
+    mock_message_box: MagicMock = MagicMock()
+    mock_data_service: MagicMock = MagicMock()
+
+    mock_dialog.getOpenFileNames.return_value = ([], "")
+
+    main_window_mock.add_files(
+        mock_dialog, mock_message_box, mock_data_service)
+
+    mock_data_service.extract_metadata.assert_not_called()
+    main_window_mock.database.add_song.assert_not_called()
+
+
+def test_add_files_happy_path(main_window_mock: MainWindow) -> None:
+    mock_dialog: MagicMock = MagicMock()
+    mock_message_box: MagicMock = MagicMock()
+    mock_data_service: MagicMock = MagicMock()
+
+    song_data: tuple[str, str, str, float, str] = (
+        "Song A", "Artist A", "Rock", 210.5, "not real")
+
+    mock_dialog.getOpenFileNames.return_value = ([song_data[4]], "")
+    mock_data_service.extract_metadata.return_value = (
+        [song_data],
+        [],
+    )
+
+    main_window_mock.add_files(
+        mock_dialog, mock_message_box, mock_data_service)
+
+    main_window_mock.database.add_song.assert_called_once_with(
+        main_window_mock.user_id, *song_data)
+    mock_message_box.information.assert_called_once()

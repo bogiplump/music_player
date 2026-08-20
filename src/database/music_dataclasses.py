@@ -8,6 +8,7 @@ from dataclasses import dataclass
 
 @dataclass(frozen=True)
 class User:
+    """Models the user table from the music database."""
     id: int
     username: str
     password_hash: str
@@ -20,6 +21,7 @@ class User:
 
 @dataclass(frozen=True)
 class Song:
+    """Models the song table from the music database."""
     id: int
     created_by_user_id: int
     title: str
@@ -43,6 +45,7 @@ class Song:
 
 @dataclass(frozen=True)
 class Playlist:
+    """Models the playlist table from the music database."""
     id: int
     user_id: int
     name: str
@@ -55,6 +58,7 @@ class Playlist:
 
 @dataclass(frozen=True)
 class PlayHistory:
+    """Models the play history table from the music database."""
     id: int
     user_id: int
     song_id: int
