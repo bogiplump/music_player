@@ -164,7 +164,7 @@ class MainWindow(QMainWindow):
         library_column.addWidget(button_add_queue)
 
         queue_column: QVBoxLayout = QVBoxLayout()
-        queue_column.addWidget(QLabel("🎶 Queue"))
+        queue_column.addWidget(QLabel("Song Queue"))
 
         self.queue_list = QListWidget()
         self.queue_list.setDragDropMode(
