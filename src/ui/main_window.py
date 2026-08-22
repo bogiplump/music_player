@@ -146,7 +146,7 @@ class MainWindow(QMainWindow):
 
         # --- Library ---
         library_column: QVBoxLayout = QVBoxLayout()
-        library_column.addWidget(QLabel("📚 Library"))
+        library_column.addWidget(QLabel("Library"))
 
         self.search_bar = QLineEdit()
         self.search_bar.setPlaceholderText("Search library")
@@ -159,7 +159,7 @@ class MainWindow(QMainWindow):
         self.library_list.itemDoubleClicked.connect(self.add_to_queue_and_play)
         library_column.addWidget(self.__library_list)
 
-        button_add_queue: QPushButton = QPushButton("➡️ Add to queue")
+        button_add_queue: QPushButton = QPushButton("Add to queue")
         button_add_queue.clicked.connect(self.add_selection_to_queue)
         library_column.addWidget(button_add_queue)
 
@@ -174,13 +174,13 @@ class MainWindow(QMainWindow):
         self.queue_list.itemDoubleClicked.connect(self.play_from_queue)
         queue_column.addWidget(self.queue_list)
 
-        button_remove_queue: QPushButton = QPushButton("❌ Remove selected")
+        button_remove_queue: QPushButton = QPushButton("Remove selected songs")
         button_remove_queue.clicked.connect(self.remove_from_queue)
         queue_column.addWidget(button_remove_queue)
 
         # --- Playlists ---
         playlist_column: QVBoxLayout = QVBoxLayout()
-        playlist_column.addWidget(QLabel("📚 Playlists"))
+        playlist_column.addWidget(QLabel("Playlists"))
 
         self.playlist_list = QListWidget()
         self.playlist_list.setSelectionMode(
