@@ -207,11 +207,6 @@ class MainWindow(QMainWindow):
         lists_layout.addLayout(playlist_column, 1)
         main_layout.addLayout(lists_layout)
 
-        # --- Now playing ---
-        self.label_now_playing = QLabel("Stopped")
-        self.label_now_playing.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        main_layout.addWidget(self.label_now_playing)
-
         # --- Playback controls ---
         controls_layout: QHBoxLayout = QHBoxLayout()
 
@@ -240,6 +235,11 @@ class MainWindow(QMainWindow):
         controls_layout.addWidget(button_next)
         controls_layout.addWidget(button_shuffle)
         main_layout.addLayout(controls_layout)
+
+        # --- Now playing ---
+        self.label_now_playing = QLabel("Stopped")
+        self.label_now_playing.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        main_layout.addWidget(self.label_now_playing)
 
         # --- Volume ---
         volume_layout: QHBoxLayout = QHBoxLayout()
