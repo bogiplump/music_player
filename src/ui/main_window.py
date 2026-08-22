@@ -134,14 +134,15 @@ class MainWindow(QMainWindow):
         # --- Top bar ---
         top_layout: QHBoxLayout = QHBoxLayout()
         button_add = QPushButton("Add songs")
-        button_add.clicked.connect(self.add_files)
+        button_add.clicked.connect(self.add_audio_files_to_library_list)
         top_layout.addWidget(button_add)
+
+        top_layout.addStretch() # To push the Stats button to the right
 
         button_stats: QPushButton = QPushButton("Stats")
         button_stats.clicked.connect(self.show_play_statistics)
         top_layout.addWidget(button_stats)
 
-        top_layout.addStretch()
         main_layout.addLayout(top_layout)
 
         # --- Library ---
@@ -150,17 +151,18 @@ class MainWindow(QMainWindow):
 
         self.search_bar = QLineEdit()
         self.search_bar.setPlaceholderText("Search library")
-        self.search_bar.textChanged.connect(self.search_music)
+        self.search_bar.textChanged.connect(self.search_songs_by_title)
         library_column.addWidget(self.search_bar)
 
         self.library_list = QListWidget()
         self.library_list.setSelectionMode(
             QAbstractItemView.SelectionMode.ExtendedSelection)
-        self.library_list.itemDoubleClicked.connect(self.add_to_queue_and_play)
+        self.library_list.itemDoubleClicked.connect(
+            self.add_song_to_queue_and_play)
         library_column.addWidget(self.__library_list)
 
-        button_add_queue: QPushButton = QPushButton("Add to queue")
-        button_add_queue.clicked.connect(self.add_selection_to_queue)
+        button_add_queue: QPushButton = QPushButton("Add song(s) to queue")
+        button_add_queue.clicked.connect(self.add_selected_songs_to_queue)
         library_column.addWidget(button_add_queue)
 
         queue_column: QVBoxLayout = QVBoxLayout()
@@ -171,7 +173,7 @@ class MainWindow(QMainWindow):
             QAbstractItemView.DragDropMode.InternalMove)
         self.queue_list.setSelectionMode(
             QAbstractItemView.SelectionMode.ExtendedSelection)
-        self.queue_list.itemDoubleClicked.connect(self.play_from_queue)
+        self.queue_list.itemDoubleClicked.connect(self.play_song_from_queue)
         queue_column.addWidget(self.queue_list)
 
         button_remove_queue: QPushButton = QPushButton("Remove selected songs")
@@ -210,9 +212,6 @@ class MainWindow(QMainWindow):
         # --- Playback controls ---
         controls_layout: QHBoxLayout = QHBoxLayout()
 
-        button_previous: QPushButton = QPushButton("⏮️")
-        button_previous.clicked.connect(self.play_previous)
-
         button_play: QPushButton = QPushButton("▶️")
         button_play.clicked.connect(self.player.play)
 
@@ -222,16 +221,19 @@ class MainWindow(QMainWindow):
         button_stop: QPushButton = QPushButton("⏹️")
         button_stop.clicked.connect(self.player.stop)
 
+        button_previous: QPushButton = QPushButton("⏮️")
+        button_previous.clicked.connect(self.play_previous_song)
+
         button_next: QPushButton = QPushButton("⏭️")
-        button_next.clicked.connect(self.play_next)
+        button_next.clicked.connect(self.play_next_song)
 
         button_shuffle: QPushButton = QPushButton("🔀")
-        button_shuffle.clicked.connect(self.shuffle)
+        button_shuffle.clicked.connect(self.shuffle_songs)
 
-        controls_layout.addWidget(button_previous)
         controls_layout.addWidget(button_play)
         controls_layout.addWidget(button_pause)
         controls_layout.addWidget(button_stop)
+        controls_layout.addWidget(button_previous)
         controls_layout.addWidget(button_next)
         controls_layout.addWidget(button_shuffle)
         main_layout.addLayout(controls_layout)
@@ -260,7 +262,7 @@ class MainWindow(QMainWindow):
 
     def on_media_status_changed(self, status: QMediaPlayer.MediaStatus) -> None:
         if status == QMediaPlayer.MediaStatus.EndOfMedia:
-            self.play_next()
+            self.play_next_song()
 
     def __refresh_library_list(self, songs_data: Optional[list[Song]] = None) -> None:
         self.library_list.clear()
@@ -280,8 +282,11 @@ class MainWindow(QMainWindow):
             item.setData(Qt.ItemDataRole.UserRole, playlist)
             self.playlist_list.addItem(item)
 
-    def add_files(self, dialog: Optional[QFileDialog] = None, message_box: Optional[QMessageBox] = None,
-                  data_service: Optional[ExtractFileDataService] = None) -> None:
+    def add_audio_files_to_library_list(self,
+                                        dialog: Optional[QFileDialog] = None,
+                                        message_box: Optional[QMessageBox] = None,
+                                        data_service: Optional[ExtractFileDataService] = None
+                                        ) -> None:
         # Making sure they are initialized.
         dialog = dialog if dialog else QFileDialog()
         message_box = message_box if message_box else QMessageBox()
@@ -327,7 +332,7 @@ class MainWindow(QMainWindow):
                 f"Added {count} songs!"
             )
 
-    def search_music(self, text: str) -> None:
+    def search_songs_by_title(self, text: str) -> None:
         if not text:
             self.__refresh_library_list()
         else:
@@ -336,24 +341,24 @@ class MainWindow(QMainWindow):
 
     # Song Queue
     # Qt.ItemDataRole.UserRole corresponds to Song objects throughout
-    def add_to_queue_and_play(self, item: QListWidgetItem) -> None:
+    def add_song_to_queue_and_play(self, item: QListWidgetItem) -> None:
         song: Song = item.data(Qt.ItemDataRole.UserRole)
-        new_item: QListWidgetItem = self.__add_item_to_queue(song)
+        new_item: QListWidgetItem = self.__add_song_to_queue(song)
         self.queue_list.setCurrentItem(new_item)
-        self.play_from_queue()
+        self.play_song_from_queue()
 
-    def add_selection_to_queue(self) -> None:
+    def add_selected_songs_to_queue(self) -> None:
         for item in self.library_list.selectedItems():
-            self.__add_item_to_queue(item.data(Qt.ItemDataRole.UserRole))
+            self.__add_song_to_queue(item.data(Qt.ItemDataRole.UserRole))
 
-    def __add_item_to_queue(self, song: Song) -> QListWidgetItem:
+    def __add_song_to_queue(self, song: Song) -> QListWidgetItem:
         item: QListWidgetItem = QListWidgetItem(
             f"{song.title} - {song.artist}")
         item.setData(Qt.ItemDataRole.UserRole, song)
         self.queue_list.addItem(item)
         return item
 
-    def play_from_queue(self) -> None:
+    def play_song_from_queue(self) -> None:
         item: Optional[QListWidgetItem] = self.queue_list.currentItem()
         if not item:
             return
@@ -369,7 +374,7 @@ class MainWindow(QMainWindow):
         for item in self.queue_list.selectedItems():
             self.queue_list.takeItem(self.queue_list.row(item))
 
-    def play_next(self) -> None:
+    def play_next_song(self) -> None:
         count: int = self.queue_list.count()
         if count == 0:
             return
@@ -377,9 +382,9 @@ class MainWindow(QMainWindow):
         row: int = self.queue_list.currentRow()
         next_row = row + 1 if row < count - 1 else 0
         self.queue_list.setCurrentRow(next_row)
-        self.play_from_queue()
+        self.play_song_from_queue()
 
-    def play_previous(self) -> None:
+    def play_previous_song(self) -> None:
         count: int = self.queue_list.count()
         if count == 0:
             return
@@ -387,9 +392,9 @@ class MainWindow(QMainWindow):
         row: int = self.queue_list.currentRow()
         previous_row = row - 1 if row > 0 else count - 1
         self.queue_list.setCurrentRow(previous_row)
-        self.play_from_queue()
+        self.play_song_from_queue()
 
-    def shuffle(self) -> None:
+    def shuffle_songs(self) -> None:
         count: int = self.queue_list.count()
         songs: list[Song] = []
 
@@ -404,7 +409,7 @@ class MainWindow(QMainWindow):
         random.shuffle(songs)
         self.queue_list.clear()
         for song in songs:
-            self.__add_item_to_queue(song)
+            self.__add_song_to_queue(song)
 
     # Here UserRole corresponds to Playlist objects
     def save_playlist(self, dialog: Optional[QInputDialog] = None, message_box: Optional[QMessageBox] = None) -> None:
@@ -431,7 +436,7 @@ class MainWindow(QMainWindow):
         playlist: Playlist = item.data(Qt.ItemDataRole.UserRole)
         songs: list[Song] = self.database.get_playlist_songs(playlist.id)
         for song in songs:
-            self.__add_item_to_queue(song)
+            self.__add_song_to_queue(song)
 
     def delete_playlist(self) -> None:
         item: Optional[QListWidgetItem] = self.playlist_list.currentItem()

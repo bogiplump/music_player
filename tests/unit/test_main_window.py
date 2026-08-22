@@ -33,7 +33,7 @@ def test_add_selection_to_queue(main_window_mock: MainWindow) -> None:
     main_window_mock.library_list.setCurrentItem(item)
     item.setSelected(True)
 
-    main_window_mock.add_selection_to_queue()
+    main_window_mock.add_selected_songs_to_queue()
     assert main_window_mock.queue_list.count() == 1
 
 
@@ -49,7 +49,7 @@ def test_play_next_wraps_around_to_first_song(main_window_mock: MainWindow) -> N
         main_window_mock.queue_list.addItem(item)
 
         main_window_mock.queue_list.setCurrentRow(last_row)
-        main_window_mock.play_next()
+        main_window_mock.play_next_song()
 
         assert main_window_mock.queue_list.currentRow() == first_row
 
@@ -75,7 +75,7 @@ def test_shuffle_preserves_all_songs(main_window_mock: MainWindow) -> None:
         item.setData(Qt.ItemDataRole.UserRole, song)
         main_window_mock.queue_list.addItem(item)
 
-    main_window_mock.shuffle()
+    main_window_mock.shuffle_songs()
 
     assert main_window_mock.queue_list.count() == 5
 
@@ -170,7 +170,7 @@ def test_add_files_no_files_selected_does_nothing(main_window_mock: MainWindow) 
 
     mock_dialog.getOpenFileNames.return_value = ([], "")
 
-    main_window_mock.add_files(
+    main_window_mock.add_audio_files_to_library_list(
         mock_dialog, mock_message_box, mock_data_service)
 
     mock_data_service.extract_metadata.assert_not_called()
@@ -191,7 +191,7 @@ def test_add_files_happy_path(main_window_mock: MainWindow) -> None:
         [],
     )
 
-    main_window_mock.add_files(
+    main_window_mock.add_audio_files_to_library_list(
         mock_dialog, mock_message_box, mock_data_service)
 
     main_window_mock.database.add_song.assert_called_once_with(
@@ -226,6 +226,6 @@ def test_play_previous_wraps_around_from_first_song(main_window_mock: MainWindow
     __fill_queue(main_window_mock, 3)
     main_window_mock.queue_list.setCurrentRow(0)
 
-    main_window_mock.play_previous()
+    main_window_mock.play_previous_song()
 
     assert main_window_mock.queue_list.currentRow() == 2
