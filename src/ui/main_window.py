@@ -237,7 +237,7 @@ class MainWindow(QMainWindow):
         main_layout.addLayout(controls_layout)
 
         # --- Now playing ---
-        self.label_now_playing = QLabel("Stopped")
+        self.label_now_playing = QLabel("Now playing: Nothing")
         self.label_now_playing.setAlignment(Qt.AlignmentFlag.AlignCenter)
         main_layout.addWidget(self.label_now_playing)
 
